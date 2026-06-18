@@ -1,8 +1,10 @@
 ---
 import '../styles/reader.css';
 import '../styles/reader-menu.css';
+import '../styles/reader-menu-pages.css';
 import '../styles/reader-news.css';
 import '../styles/reader-loading.css';
+import '../styles/reader-sticky-header.css';
 import '../styles/reader-pull-refresh.css';
 import { rssConfig } from '../config/rss';
 import type { Locale } from '../config/site';
@@ -16,6 +18,7 @@ const { locale } = Astro.props;
 const t = useTranslations(locale);
 const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 const readerScriptUrl = `${baseUrl}scripts/rss-reader.js`;
+const menuEnhancementsScriptUrl = `${baseUrl}scripts/rss-menu-enhancements.js`;
 const pullRefreshScriptUrl = `${baseUrl}scripts/rss-pull-refresh.js`;
 const imageFallbackScriptUrl = `${baseUrl}scripts/rss-image-fallback.js`;
 const labels = {
@@ -25,6 +28,11 @@ const labels = {
   filterCategory: t('reader.categoryFilter.aria'),
   filterSource: t('reader.sourceFilter.aria'),
   justNow: t('reader.justNow'),
+  menuBack: t('reader.menu.back'),
+  menuCategoryResult: t('reader.menu.categoryResult'),
+  menuSearchEmpty: t('reader.menu.searchEmpty'),
+  menuSearchResults: t('reader.menu.searchResults'),
+  menuSourceResult: t('reader.menu.sourceResult'),
   noMoreNews: t('reader.noMoreNews'),
   otherCategories: t('reader.categoryGroups.other'),
   otherSources: t('reader.sourceGroups.other'),
@@ -86,14 +94,62 @@ const labels = {
                 {t('reader.menu.close')}
               </button>
             </div>
-            <details class="reader-menu__section" open>
-              <summary>{t('reader.menu.categories')}</summary>
-              <div class="reader-menu__content" data-menu-categories></div>
-            </details>
-            <details class="reader-menu__section">
-              <summary>{t('reader.menu.sources')}</summary>
-              <div class="reader-menu__content" data-menu-sources></div>
-            </details>
+
+            <div class="reader-menu__page reader-menu__page--home" data-menu-page="home">
+              <div class="reader-menu-search" role="search">
+                <label for="reader-menu-search">{t('reader.menu.search')}</label>
+                <input
+                  id="reader-menu-search"
+                  type="search"
+                  data-menu-search-input
+                  list="reader-menu-search-options"
+                  autocomplete="off"
+                  placeholder={t('reader.menu.searchPlaceholder')}
+                />
+                <datalist id="reader-menu-search-options" data-menu-search-options></datalist>
+                <div class="reader-menu-search__results" data-menu-search-results hidden aria-live="polite"></div>
+              </div>
+
+              <div class="reader-menu__quick-links" aria-label={t('reader.menu.shortcuts')}>
+                <button class="reader-menu__shortcut" type="button" data-menu-view-target="my-categories">
+                  {t('reader.menu.myCategories')}
+                </button>
+                <button class="reader-menu__shortcut" type="button" data-menu-view-target="my-sources">
+                  {t('reader.menu.mySources')}
+                </button>
+              </div>
+
+              <details class="reader-menu__section" open>
+                <summary>{t('reader.menu.categories')}</summary>
+                <div class="reader-menu__content" data-menu-categories></div>
+              </details>
+              <details class="reader-menu__section">
+                <summary>{t('reader.menu.sources')}</summary>
+                <div class="reader-menu__content" data-menu-sources></div>
+              </details>
+            </div>
+
+            <div class="reader-menu__page" data-menu-page="my-categories" hidden>
+              <button class="reader-menu__back" type="button" data-menu-view-back>
+                {t('reader.menu.back')}
+              </button>
+              <div class="reader-menu-page__title">
+                <h3>{t('reader.menu.myCategories')}</h3>
+                <p>{t('reader.menu.myCategoriesDescription')}</p>
+              </div>
+              <div class="reader-menu__content" data-menu-page-categories></div>
+            </div>
+
+            <div class="reader-menu__page" data-menu-page="my-sources" hidden>
+              <button class="reader-menu__back" type="button" data-menu-view-back>
+                {t('reader.menu.back')}
+              </button>
+              <div class="reader-menu-page__title">
+                <h3>{t('reader.menu.mySources')}</h3>
+                <p>{t('reader.menu.mySourcesDescription')}</p>
+              </div>
+              <div class="reader-menu__content" data-menu-page-sources></div>
+            </div>
           </div>
         </div>
       </div>
@@ -136,7 +192,10 @@ const labels = {
 
       <div class="reader-feedback">
         <p class="reader-status" data-status aria-live="polite"></p>
-        <p class="reader-loading" data-loading>{t('reader.loading')}</p>
+        <p class="reader-loading" data-loading hidden>{t('reader.loading')}</p>
+        <p class="reader-processing" data-processing-indicator hidden aria-live="polite" aria-atomic="true">
+          {t('reader.processing')}
+        </p>
       </div>
 
       <section class="reader-feed-panel" data-panel="mine">
@@ -195,5 +254,6 @@ const labels = {
 </section>
 
 <script type="module" src={readerScriptUrl}></script>
+<script type="module" src={menuEnhancementsScriptUrl}></script>
 <script type="module" src={pullRefreshScriptUrl}></script>
 <script type="module" src={imageFallbackScriptUrl}></script>
