@@ -1,0 +1,183 @@
+.reader-appbar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reader-menu {
+  position: relative;
+}
+
+.reader-menu__toggle,
+.reader-menu__close,
+.reader-menu-filter {
+  font: inherit;
+  cursor: pointer;
+}
+
+.reader-menu__toggle {
+  display: inline-grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  gap: 0.22rem;
+  padding: 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  color: var(--color-text);
+}
+
+.reader-menu__toggle span {
+  width: 1rem;
+  height: 0.12rem;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.reader-menu__panel {
+  position: fixed;
+  inset: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-3) auto var(--space-3);
+  z-index: var(--z-dropdown);
+  display: grid;
+  max-height: min(82svh, 38rem);
+  overflow: auto;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-border), transparent 8%);
+  border-radius: var(--radius-2xl);
+  background: color-mix(in srgb, var(--color-surface), transparent 2%);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(18px);
+}
+
+.reader-menu__panel[hidden] {
+  display: none;
+}
+
+.reader-menu__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.reader-menu__header h2 {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text);
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.reader-menu__close {
+  flex: 0 0 auto;
+  min-height: 2.15rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.reader-menu__section,
+.reader-category-group,
+.reader-menu-accordion {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-soft);
+}
+
+.reader-menu__section > summary,
+.reader-category-group__summary,
+.reader-menu-accordion > summary {
+  min-height: 2.6rem;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.reader-menu__content,
+.reader-category-group__items,
+.reader-menu-list {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.reader-menu__content {
+  gap: var(--space-3);
+}
+
+.reader-menu-list {
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+}
+
+.reader-menu-filter {
+  min-height: 2.35rem;
+  min-width: 0;
+  padding: 0 var(--space-3);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 760;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader-menu-filter[aria-pressed="true"],
+.reader-topic-chip--source[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--color-accent), transparent 42%);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.category-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.reader-category-group__items {
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+}
+
+.reader-menu__toggle:focus-visible,
+.reader-menu__close:focus-visible,
+.reader-menu-filter:focus-visible,
+.reader-menu__section > summary:focus-visible,
+.reader-category-group__summary:focus-visible,
+.reader-menu-accordion > summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary), transparent 58%);
+  outline-offset: 2px;
+}
+
+.reader-menu__toggle:hover,
+.reader-menu__close:hover,
+.reader-menu-filter:hover {
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-menu__toggle,
+  .reader-menu__close,
+  .reader-menu-filter {
+    transition: none;
+  }
+}
+
+@media (min-width: 48rem) {
+  .reader-menu__panel {
+    inset: auto auto auto 50%;
+    top: calc(var(--space-6) + var(--space-3));
+    width: min(92vw, 38rem);
+    transform: translateX(calc(-50% + 4rem));
+  }
+}

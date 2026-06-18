@@ -35,6 +35,11 @@ if (root) {
     settingsCategories: root.querySelector('[data-category-list="settings"]'),
     ignoredSources: root.querySelector('[data-source-list="settings"]'),
     ignoredSourcesEmpty: root.querySelector('[data-empty-ignored-sources]'),
+    menuToggle: root.querySelector('[data-menu-toggle]'),
+    menuClose: root.querySelector('[data-menu-close]'),
+    menuPanel: root.querySelector('[data-menu-panel]'),
+    menuCategories: root.querySelector('[data-menu-categories]'),
+    menuSources: root.querySelector('[data-menu-sources]'),
     saveSetup: root.querySelector('[data-save-categories="setup"]'),
     saveSettings: root.querySelector('[data-save-categories="settings"]'),
     tabs: [...root.querySelectorAll('[data-tab]')],
@@ -59,7 +64,10 @@ if (root) {
   const state = {
     activeTab: 'mine',
     activeCategoryFilter: null,
+    activeSourceFilter: null,
     sources: [],
+    sourceMap: new Map(),
+    categoryGroups: [],
     categories: [],
     selectedCategories: [],
     ignoredSourceIds: new Set(),
@@ -105,7 +113,9 @@ if (root) {
   async function init() {
     setLoading(true);
     state.sources = await fetchJson(config.apiBase, 'sources.json');
-    state.categories = getAllCategories(state.sources);
+    state.sourceMap = new Map(state.sources.map((source) => [source.id, source]).filter(([id]) => Boolean(id)));
+    state.categoryGroups = await loadCategoryGroups();
+    state.categories = state.categoryGroups.flatMap((group) => group.categorias);
     state.selectedCategories = readSelectedCategories().filter((category) => state.categories.includes(category));
     state.ignoredSourceIds = readIgnoredSourceIds();
     state.draftIgnoredSourceIds = new Set(state.ignoredSourceIds);
@@ -114,6 +124,7 @@ if (root) {
 
     renderCategoryPickers();
     renderSelectedCategories();
+    renderFilterMenu();
     bindEvents();
 
     if (state.selectedCategories.length === 0) {
@@ -126,6 +137,75 @@ if (root) {
     setLoading(false);
   }
 
+  async function loadCategoryGroups() {
+    const availableCategories = getAllCategories(state.sources);
+
+    try {
+      const catalog = await fetchJson(config.apiBase, 'categories.json');
+      const groups = normalizeCategoryGroups(catalog.supercategorias, availableCategories);
+
+      return groups.length > 0 ? groups : createFallbackCategoryGroups(availableCategories);
+    } catch {
+      return createFallbackCategoryGroups(availableCategories);
+    }
+  }
+
+  function normalizeCategoryGroups(supercategories = [], availableCategories = []) {
+    const available = new Set(availableCategories);
+    const used = new Set();
+    const groups = [];
+
+    supercategories.forEach((group) => {
+      const categorias = [...new Set(group.categorias ?? [])].filter((category) => {
+        if (!available.has(category) || used.has(category)) {
+          return false;
+        }
+
+        used.add(category);
+        return true;
+      });
+
+      if (categorias.length > 0) {
+        groups.push({
+          id: group.id ?? slugify(group.title ?? categorias[0]),
+          title: group.title ?? labels.otherCategories ?? 'Otras categorías',
+          categorias,
+        });
+      }
+    });
+
+    const remainingCategories = availableCategories.filter((category) => !used.has(category));
+
+    if (remainingCategories.length > 0) {
+      groups.push({
+        id: 'other-categories',
+        title: labels.otherCategories ?? 'Otras categorías',
+        categorias: remainingCategories,
+      });
+    }
+
+    return groups;
+  }
+
+  function createFallbackCategoryGroups(categories) {
+    return [
+      {
+        id: 'all-categories',
+        title: labels.allCategories ?? 'Todas',
+        categorias: categories,
+      },
+    ];
+  }
+
+  function slugify(value) {
+    return String(value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'grupo';
+  }
+
   function bindEvents() {
     elements.tabs.forEach((tab) => {
       tab.addEventListener('click', () => showApp(tab.dataset.tab));
@@ -134,6 +214,8 @@ if (root) {
     elements.saveSetup?.addEventListener('click', () => saveCategoriesFrom(elements.setupCategories));
     elements.saveSettings?.addEventListener('click', () => saveCategoriesFrom(elements.settingsCategories));
     elements.loadMore?.addEventListener('click', () => loadMoreActiveItems({ source: 'manual' }));
+    elements.menuToggle?.addEventListener('click', () => setMenuOpen(elements.menuPanel?.hidden ?? true));
+    elements.menuClose?.addEventListener('click', () => setMenuOpen(false));
 
     elements.setupCategories?.addEventListener('change', updateCategoryActions);
     elements.settingsCategories?.addEventListener('change', () => {
@@ -152,10 +234,40 @@ if (root) {
     });
     elements.selectedCategories?.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
-      const button = target?.closest('[data-category-filter]');
+      const categoryButton = target?.closest('[data-category-filter]');
+      const sourceButton = target?.closest('[data-source-filter]');
 
-      if (button) {
-        setCategoryFilter(button.dataset.categoryFilter || null);
+      if (categoryButton) {
+        setCategoryFilter(categoryButton.dataset.categoryFilter || null);
+      } else if (sourceButton) {
+        setSourceFilter(sourceButton.dataset.sourceFilter || null);
+      }
+    });
+    elements.menuCategories?.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const button = target?.closest('[data-menu-category-filter]');
+
+      if (!button) {
+        return;
+      }
+
+      setCategoryFilter(button.dataset.menuCategoryFilter || null);
+      setMenuOpen(false);
+    });
+    elements.menuSources?.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const button = target?.closest('[data-menu-source-filter]');
+
+      if (!button) {
+        return;
+      }
+
+      setSourceFilter(button.dataset.menuSourceFilter || null);
+      setMenuOpen(false);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
       }
     });
 
@@ -168,10 +280,24 @@ if (root) {
     }
   }
 
+  function setMenuOpen(isOpen) {
+    if (!elements.menuPanel || !elements.menuToggle) {
+      return;
+    }
+
+    elements.menuPanel.hidden = !isOpen;
+    elements.menuToggle.setAttribute('aria-expanded', String(isOpen));
+
+    if (isOpen) {
+      renderFilterMenu();
+    }
+  }
+
   function showOnboarding() {
     pauseAutoObserver();
     elements.onboarding.hidden = false;
     elements.app.hidden = true;
+    setMenuOpen(false);
     setStatus('');
     updateCategoryActions();
   }
@@ -228,24 +354,44 @@ if (root) {
 
     container.innerHTML = '';
 
-    state.categories.forEach((category, index) => {
-      const id = `${container.dataset.categoryList}-category-${index}`;
-      const label = document.createElement('label');
-      label.className = 'category-pill';
-      label.htmlFor = id;
+    state.categoryGroups.forEach((group, groupIndex) => {
+      const details = document.createElement('details');
+      details.className = 'reader-category-group';
+      details.open = true;
 
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.id = id;
-      input.value = category;
-      input.checked = state.selectedCategories.includes(category);
+      const summary = document.createElement('summary');
+      summary.className = 'reader-category-group__summary';
+      summary.textContent = group.title;
 
-      const text = document.createElement('span');
-      text.textContent = category;
+      const list = document.createElement('div');
+      list.className = 'reader-category-group__items';
 
-      label.append(input, text);
-      container.append(label);
+      group.categorias.forEach((category, categoryIndex) => {
+        const id = `${container.dataset.categoryList}-category-${groupIndex}-${categoryIndex}`;
+        list.append(createCategoryCheckbox(category, id));
+      });
+
+      details.append(summary, list);
+      container.append(details);
     });
+  }
+
+  function createCategoryCheckbox(category, id) {
+    const label = document.createElement('label');
+    label.className = 'category-pill';
+    label.htmlFor = id;
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = id;
+    input.value = category;
+    input.checked = state.selectedCategories.includes(category);
+
+    const text = document.createElement('span');
+    text.textContent = category;
+
+    label.append(input, text);
+    return label;
   }
 
   function renderIgnoredSourcePicker(categories) {
@@ -281,6 +427,113 @@ if (root) {
     });
   }
 
+  function renderFilterMenu() {
+    renderMenuCategories();
+    renderMenuSources();
+  }
+
+  function renderMenuCategories() {
+    if (!elements.menuCategories) {
+      return;
+    }
+
+    elements.menuCategories.innerHTML = '';
+
+    state.categoryGroups.forEach((group, groupIndex) => {
+      const details = document.createElement('details');
+      details.className = 'reader-menu-accordion';
+      details.open = groupIndex === 0;
+
+      const summary = document.createElement('summary');
+      summary.textContent = group.title;
+
+      const list = document.createElement('div');
+      list.className = 'reader-menu-list';
+
+      group.categorias.forEach((category) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'reader-menu-filter';
+        button.dataset.menuCategoryFilter = category;
+        button.setAttribute('aria-pressed', String(state.activeCategoryFilter === category));
+        button.setAttribute('aria-label', getCategoryFilterLabel(category));
+        button.textContent = category;
+        list.append(button);
+      });
+
+      details.append(summary, list);
+      elements.menuCategories.append(details);
+    });
+  }
+
+  function renderMenuSources() {
+    if (!elements.menuSources) {
+      return;
+    }
+
+    elements.menuSources.innerHTML = '';
+
+    getSourceGroups().forEach((group, groupIndex) => {
+      const details = document.createElement('details');
+      details.className = 'reader-menu-accordion';
+      details.open = groupIndex === 0;
+
+      const summary = document.createElement('summary');
+      summary.textContent = group.title;
+
+      const list = document.createElement('div');
+      list.className = 'reader-menu-list';
+
+      group.sources.forEach((source) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'reader-menu-filter';
+        button.dataset.menuSourceFilter = source.id;
+        button.setAttribute('aria-pressed', String(state.activeSourceFilter === source.id));
+        button.setAttribute('aria-label', getSourceFilterLabel(source.title ?? source.id));
+        button.textContent = source.title ?? source.id;
+        list.append(button);
+      });
+
+      details.append(summary, list);
+      elements.menuSources.append(details);
+    });
+  }
+
+  function getSourceGroups() {
+    const groupItems = state.categoryGroups.map((group) => ({
+      id: group.id,
+      title: group.title,
+      categorySet: new Set(group.categorias),
+      sources: [],
+    }));
+    const otherGroup = {
+      id: 'other-sources',
+      title: labels.otherSources ?? 'Otras fuentes',
+      categorySet: new Set(),
+      sources: [],
+    };
+
+    getVisibleSources().forEach((source) => {
+      const group = groupItems.find((item) => source.categorias?.some((category) => item.categorySet.has(category)));
+      (group ?? otherGroup).sources.push(source);
+    });
+
+    return [...groupItems, otherGroup]
+      .map((group) => ({
+        id: group.id,
+        title: group.title,
+        sources: group.sources.sort(sortSourcesByTitle),
+      }))
+      .filter((group) => group.sources.length > 0);
+  }
+
+  function getVisibleSources() {
+    return state.sources
+      .filter((source) => source.id && !isIgnoredSource(source.id))
+      .sort(sortSourcesByTitle);
+  }
+
   function updateCategoryActions() {
     const setupCount = getCheckedCategories(elements.setupCategories).length;
     const settingsCount = getCheckedCategories(elements.settingsCategories).length;
@@ -307,7 +560,11 @@ if (root) {
 
     return state.sources
       .filter((source) => source.id && source.categorias?.some((category) => selected.has(category)))
-      .sort((a, b) => sourceTitleSorter.compare(a.title ?? a.id, b.title ?? b.id));
+      .sort(sortSourcesByTitle);
+  }
+
+  function sortSourcesByTitle(a, b) {
+    return sourceTitleSorter.compare(a.title ?? a.id, b.title ?? b.id);
   }
 
   function updateDraftIgnoredSource(sourceId, isIgnored) {
@@ -342,16 +599,17 @@ if (root) {
     if (isSettings) {
       state.ignoredSourceIds = new Set(getVisibleIgnoredSourceIds(categories));
       persistIgnoredSourceIds();
-    }
 
-    if (state.activeCategoryFilter && !state.selectedCategories.includes(state.activeCategoryFilter)) {
-      state.activeCategoryFilter = null;
+      if (state.activeSourceFilter && state.ignoredSourceIds.has(state.activeSourceFilter)) {
+        state.activeSourceFilter = null;
+      }
     }
 
     localStorage.setItem(config.storageKey, JSON.stringify(categories));
     resetFeeds();
     renderCategoryPickers();
     renderSelectedCategories();
+    renderFilterMenu();
     setStatus(labels.savedCategories, 'success');
     showApp('mine');
   }
@@ -413,12 +671,24 @@ if (root) {
       fragment.append(createCategoryFilterChip(category, category));
     });
 
+    if (state.activeCategoryFilter && !state.selectedCategories.includes(state.activeCategoryFilter)) {
+      fragment.append(createCategoryFilterChip(state.activeCategoryFilter, state.activeCategoryFilter));
+    }
+
+    if (state.activeSourceFilter) {
+      const source = state.sourceMap.get(state.activeSourceFilter);
+      fragment.append(createSourceFilterChip(state.activeSourceFilter, source?.title ?? state.activeSourceFilter));
+    }
+
     elements.selectedCategories.append(fragment);
   }
 
   function createCategoryFilterChip(category, text) {
     const button = document.createElement('button');
-    const isActive = state.activeCategoryFilter === (category || null);
+    const isAllFilter = !category;
+    const isActive = isAllFilter
+      ? !state.activeCategoryFilter && !state.activeSourceFilter
+      : state.activeCategoryFilter === category;
 
     button.type = 'button';
     button.className = 'reader-topic-chip';
@@ -433,23 +703,65 @@ if (root) {
     return button;
   }
 
+  function createSourceFilterChip(sourceId, text) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'reader-topic-chip reader-topic-chip--source';
+    button.dataset.sourceFilter = sourceId;
+    button.setAttribute('aria-pressed', String(state.activeSourceFilter === sourceId));
+    button.setAttribute('aria-label', getSourceFilterLabel(text));
+    button.textContent = text;
+
+    return button;
+  }
+
   function getCategoryFilterLabel(category) {
     return (labels.filterCategory ?? 'Filtrar por {{category}}')
       .replaceAll('{{category}}', category)
       .replaceAll('{category}', category);
   }
 
+  function getSourceFilterLabel(source) {
+    return (labels.filterSource ?? 'Filtrar por {{source}}')
+      .replaceAll('{{source}}', source)
+      .replaceAll('{source}', source);
+  }
+
   function setCategoryFilter(category) {
     const nextCategory = category || null;
 
-    if (state.activeCategoryFilter === nextCategory) {
+    if (state.activeCategoryFilter === nextCategory && !state.activeSourceFilter) {
       return;
     }
 
     state.activeCategoryFilter = nextCategory;
+    state.activeSourceFilter = null;
+    applyFilterChange();
+  }
+
+  function setSourceFilter(sourceId) {
+    const nextSource = sourceId || null;
+
+    if (nextSource && !state.sourceMap.has(nextSource)) {
+      return;
+    }
+
+    if (state.activeSourceFilter === nextSource && !state.activeCategoryFilter) {
+      return;
+    }
+
+    state.activeSourceFilter = nextSource;
+    state.activeCategoryFilter = null;
+    applyFilterChange();
+  }
+
+  function applyFilterChange() {
     resetFeeds();
     renderSelectedCategories();
-    showApp(state.activeTab);
+    renderFilterMenu();
+
+    const nextTab = state.activeTab === 'settings' ? 'mine' : state.activeTab;
+    showApp(nextTab);
   }
 
   function resetFeeds() {
@@ -488,14 +800,14 @@ if (root) {
 
   async function seedFeed(tab) {
     const feed = state.feeds[tab];
-    const sourceMap = new Map(state.sources.map((source) => [source.id, source]));
+    const sourceMap = state.sourceMap;
 
     try {
       if (state.activeCategoryFilter) {
         const data = await fetchJson(config.apiBase, 'indexes/categorias.json');
         const items = data.categorias?.[state.activeCategoryFilter] ?? [];
         addUniqueNews(feed, items.map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
-      } else if (tab === 'all') {
+      } else if (tab === 'all' || state.activeSourceFilter) {
         const data = await fetchJson(config.apiBase, 'indexes/portada.json');
         addUniqueNews(feed, (data.noticias ?? []).map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
       } else {
@@ -580,6 +892,12 @@ if (root) {
 
   function getArchiveSources(feed) {
     if (!feed.archiveSources) {
+      if (state.activeSourceFilter) {
+        const source = state.sourceMap.get(state.activeSourceFilter);
+        feed.archiveSources = source && !isIgnoredSource(source.id) ? [source] : [];
+        return feed.archiveSources;
+      }
+
       const categoryFilters = getFeedCategoryFilters(feed.tab);
       const sources = categoryFilters.length === 0
         ? state.sources
@@ -600,11 +918,15 @@ if (root) {
   }
 
   function matchesVisibleItem(item) {
-    return matchesActiveCategory(item) && !isIgnoredSource(item.fuenteId);
+    return matchesActiveCategory(item) && matchesActiveSource(item) && !isIgnoredSource(item.fuenteId);
   }
 
   function matchesActiveCategory(item) {
     return !state.activeCategoryFilter || item.categorias?.includes(state.activeCategoryFilter);
+  }
+
+  function matchesActiveSource(item) {
+    return !state.activeSourceFilter || item.fuenteId === state.activeSourceFilter;
   }
 
   function isIgnoredSource(sourceId) {
@@ -713,7 +1035,7 @@ if (root) {
 
     feed.renderedCount = visibleItems.length;
     empty.hidden = visibleItems.length > 0;
-    elements.loadMore.hidden = tab === 'settings' || (feed.exhausted && feed.visible >= feed.items.length);
+    elements.loadMore.hidden = tab === 'settings' || tab === 'saved' || (feed.exhausted && feed.visible >= feed.items.length);
 
     if (visibleItems.length > 0) {
       setStatus(feed.exhausted ? labels.noMoreNews : labels.readyStatus);
@@ -759,6 +1081,7 @@ if (root) {
     const article = document.createElement('article');
     article.className = 'news-card';
     article.dataset.url = item.url;
+    article.dataset.sourceId = item.fuenteId;
 
     const link = document.createElement('a');
     link.className = 'news-card__link';

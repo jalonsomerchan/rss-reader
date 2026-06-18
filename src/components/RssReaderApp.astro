@@ -1,5 +1,6 @@
 ---
 import '../styles/reader.css';
+import '../styles/reader-menu.css';
 import { rssConfig } from '../config/rss';
 import type { Locale } from '../config/site';
 import { useTranslations } from '../i18n/ui';
@@ -17,8 +18,11 @@ const labels = {
   copiedLink: t('reader.copiedLink'),
   errorLoading: t('reader.errorLoading'),
   filterCategory: t('reader.categoryFilter.aria'),
+  filterSource: t('reader.sourceFilter.aria'),
   justNow: t('reader.justNow'),
   noMoreNews: t('reader.noMoreNews'),
+  otherCategories: t('reader.categoryGroups.other'),
+  otherSources: t('reader.sourceGroups.other'),
   readyStatus: t('reader.readyStatus'),
   removeSaved: t('reader.removeSaved'),
   saveArticle: t('reader.saveArticle'),
@@ -49,10 +53,45 @@ const labels = {
         <span class="reader-brand__mark" aria-hidden="true">R</span>
         <span>{t('reader.app.name')}</span>
       </div>
-      <span class="reader-appbar__status">
-        <span aria-hidden="true"></span>
-        {t('reader.app.status')}
-      </span>
+      <div class="reader-appbar__actions">
+        <span class="reader-appbar__status">
+          <span aria-hidden="true"></span>
+          {t('reader.app.status')}
+        </span>
+        <div class="reader-menu" data-reader-menu>
+          <button
+            class="reader-menu__toggle"
+            type="button"
+            data-menu-toggle
+            aria-expanded="false"
+            aria-controls="reader-filter-menu"
+            aria-label={t('reader.menu.open')}
+          >
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+          </button>
+          <div class="reader-menu__panel" id="reader-filter-menu" data-menu-panel hidden>
+            <div class="reader-menu__header">
+              <div>
+                <p class="reader-eyebrow">{t('reader.menu.eyebrow')}</p>
+                <h2>{t('reader.menu.title')}</h2>
+              </div>
+              <button class="reader-menu__close" type="button" data-menu-close>
+                {t('reader.menu.close')}
+              </button>
+            </div>
+            <details class="reader-menu__section" open>
+              <summary>{t('reader.menu.categories')}</summary>
+              <div class="reader-menu__content" data-menu-categories></div>
+            </details>
+            <details class="reader-menu__section">
+              <summary>{t('reader.menu.sources')}</summary>
+              <div class="reader-menu__content" data-menu-sources></div>
+            </details>
+          </div>
+        </div>
+      </div>
     </header>
 
     <section class="reader-panel reader-onboarding" data-onboarding hidden>
