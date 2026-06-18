@@ -20,6 +20,7 @@ if (root) {
   const config = {
     apiBase: root.dataset.apiBase ?? '',
     storageKey: root.dataset.storageKey ?? 'rss-reader:selected-categories',
+    savedStorageKey: `${root.dataset.storageKey ?? 'rss-reader:selected-categories'}:saved-news`,
     pageSize: Number(root.dataset.pageSize ?? 8),
     archiveMonthLookback: Number(root.dataset.archiveMonthLookback ?? 12),
     archiveSourceBatchSize: Number(root.dataset.archiveSourceBatchSize ?? 2),
@@ -38,11 +39,14 @@ if (root) {
     lists: {
       mine: root.querySelector('[data-list="mine"]'),
       all: root.querySelector('[data-list="all"]'),
+      saved: root.querySelector('[data-list="saved"]'),
     },
     empty: {
       mine: root.querySelector('[data-empty="mine"]'),
       all: root.querySelector('[data-empty="all"]'),
+      saved: root.querySelector('[data-empty="saved"]'),
     },
+    selectedCategories: root.querySelector('[data-selected-categories]'),
     status: root.querySelector('[data-status]'),
     loading: root.querySelector('[data-loading]'),
     loadMore: root.querySelector('[data-load-more]'),
@@ -54,6 +58,8 @@ if (root) {
     sources: [],
     categories: [],
     selectedCategories: [],
+    savedItems: [],
+    savedUrls: new Set(),
     observer: null,
     autoLoadTimer: 0,
     lastAutoLoadAt: 0,
@@ -94,8 +100,11 @@ if (root) {
     state.sources = await fetchJson(config.apiBase, 'sources.json');
     state.categories = getAllCategories(state.sources);
     state.selectedCategories = readSelectedCategories().filter((category) => state.categories.includes(category));
+    state.savedItems = readSavedItems();
+    state.savedUrls = new Set(state.savedItems.map((item) => item.url).filter(Boolean));
 
     renderCategoryPickers();
+    renderSelectedCategories();
     bindEvents();
 
     if (state.selectedCategories.length === 0) {
@@ -151,13 +160,19 @@ if (root) {
       panel.hidden = panel.dataset.panel !== tab;
     });
 
-    elements.loadMore.hidden = tab === 'settings';
-    elements.sentinel.hidden = tab === 'settings';
+    elements.loadMore.hidden = tab === 'settings' || tab === 'saved';
+    elements.sentinel.hidden = tab === 'settings' || tab === 'saved';
 
     if (tab === 'settings') {
       pauseAutoObserver();
       setStatus(labels.settingsHint);
       updateCategoryActions();
+      return;
+    }
+
+    if (tab === 'saved') {
+      pauseAutoObserver();
+      renderSavedFeed();
       return;
     }
 
@@ -232,6 +247,7 @@ if (root) {
     localStorage.setItem(config.storageKey, JSON.stringify(categories));
     state.feeds.mine = createFeed('mine');
     renderCategoryPickers();
+    renderSelectedCategories();
     setStatus(labels.savedCategories, 'success');
     showApp('mine');
   }
@@ -244,6 +260,35 @@ if (root) {
     } catch {
       return [];
     }
+  }
+
+  function readSavedItems() {
+    try {
+      const value = JSON.parse(localStorage.getItem(config.savedStorageKey) ?? '[]');
+
+      return Array.isArray(value) ? value.filter((item) => item?.url && item?.titulo) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function persistSavedItems() {
+    localStorage.setItem(config.savedStorageKey, JSON.stringify(state.savedItems));
+  }
+
+  function renderSelectedCategories() {
+    if (!elements.selectedCategories) {
+      return;
+    }
+
+    elements.selectedCategories.innerHTML = '';
+
+    state.selectedCategories.slice(0, 8).forEach((category) => {
+      const chip = document.createElement('span');
+      chip.className = 'reader-topic-chip';
+      chip.textContent = category;
+      elements.selectedCategories.append(chip);
+    });
   }
 
   async function ensureFeed(tab) {
@@ -395,6 +440,7 @@ if (root) {
     return Boolean(
       feed &&
         state.activeTab !== 'settings' &&
+        state.activeTab !== 'saved' &&
         !document.hidden &&
         !elements.app.hidden &&
         !elements.sentinel.hidden &&
@@ -407,7 +453,7 @@ if (root) {
   }
 
   async function loadMoreActiveItems({ source = 'manual' } = {}) {
-    if (state.activeTab === 'settings') {
+    if (state.activeTab === 'settings' || state.activeTab === 'saved') {
       return;
     }
 
@@ -477,6 +523,26 @@ if (root) {
     }
   }
 
+  function renderSavedFeed() {
+    const list = elements.lists.saved;
+    const empty = elements.empty.saved;
+
+    if (!list || !empty) {
+      return;
+    }
+
+    list.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
+    state.savedItems.forEach((item) => {
+      fragment.append(createNewsCard(item));
+    });
+
+    list.append(fragment);
+    empty.hidden = state.savedItems.length > 0;
+    setStatus(state.savedItems.length > 0 ? labels.readyStatus : '');
+  }
+
   function hasRenderOrderChanged(list, visibleItems, renderedCount) {
     if (renderedCount === 0 || renderedCount > visibleItems.length) {
       return renderedCount > visibleItems.length;
@@ -495,10 +561,6 @@ if (root) {
     const article = document.createElement('article');
     article.className = 'news-card';
     article.dataset.url = item.url;
-
-    if (index === 0) {
-      article.classList.add('news-card--featured');
-    }
 
     const link = document.createElement('a');
     link.className = 'news-card__link';
@@ -561,14 +623,23 @@ if (root) {
 
     link.append(media, body);
 
+    const actions = document.createElement('div');
+    actions.className = 'news-card__actions';
+
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'news-card__action';
+    updateSaveButton(save, item);
+    save.addEventListener('click', () => toggleSavedItem(item));
+
     const share = document.createElement('button');
     share.type = 'button';
-    share.className = 'news-card__share';
+    share.className = 'news-card__action';
     share.setAttribute('aria-label', `${labels.share}: ${item.titulo}`);
     share.addEventListener('click', () => shareNews(item));
 
     const shareIcon = document.createElement('span');
-    shareIcon.className = 'news-card__share-icon';
+    shareIcon.className = 'news-card__action-icon';
     shareIcon.textContent = '↗';
     shareIcon.setAttribute('aria-hidden', 'true');
 
@@ -576,9 +647,61 @@ if (root) {
     shareText.textContent = labels.share;
 
     share.append(shareIcon, shareText);
-    article.append(link, share);
+    actions.append(save, share);
+    article.append(link, actions);
 
     return article;
+  }
+
+  function toggleSavedItem(item) {
+    if (!item.url) {
+      return;
+    }
+
+    if (state.savedUrls.has(item.url)) {
+      state.savedItems = state.savedItems.filter((savedItem) => savedItem.url !== item.url);
+      state.savedUrls.delete(item.url);
+    } else {
+      state.savedItems = [getStorableItem(item), ...state.savedItems].slice(0, 100);
+      state.savedUrls = new Set(state.savedItems.map((savedItem) => savedItem.url));
+      setStatus(labels.savedArticle, 'success');
+    }
+
+    persistSavedItems();
+    refreshSaveButtons(item.url);
+
+    if (state.activeTab === 'saved') {
+      renderSavedFeed();
+    }
+  }
+
+  function getStorableItem(item) {
+    return {
+      titulo: item.titulo,
+      url: item.url,
+      imagen: item.imagen,
+      fecha: item.fecha,
+      fuenteId: item.fuenteId,
+      fuenteTitle: item.fuenteTitle,
+      categorias: item.categorias,
+      idioma: item.idioma,
+    };
+  }
+
+  function refreshSaveButtons(url) {
+    root.querySelectorAll('.news-card__action[data-save]').forEach((button) => {
+      if (button.closest('.news-card')?.dataset.url === url) {
+        updateSaveButton(button, { url });
+      }
+    });
+  }
+
+  function updateSaveButton(button, item) {
+    const isSaved = state.savedUrls.has(item.url);
+    button.dataset.save = 'true';
+    button.dataset.saved = String(isSaved);
+    button.setAttribute('aria-label', `${isSaved ? labels.removeSaved : labels.saveArticle}: ${item.titulo ?? ''}`);
+    button.textContent = isSaved ? labels.saved : labels.saveArticle;
   }
 
   function createCategoryTags(categories = []) {

@@ -11,12 +11,14 @@ interface Props {
   description?: string;
   image?: string;
   locale?: Locale;
+  appShell?: boolean;
 }
 
 const {
   title = siteConfig.name,
   image = 'og-image.svg',
   locale = defaultLocale,
+  appShell = false,
 } = Astro.props;
 
 const t = useTranslations(locale);
@@ -52,10 +54,10 @@ const ogLocale = locale === 'es' ? 'es_ES' : 'en_US';
     <meta name="twitter:image" content={imageUrl} />
   </head>
   <body>
-    <Header locale={locale} />
+    {!appShell && <Header locale={locale} />}
     <main>
       <slot />
     </main>
-    <Footer locale={locale} />
+    {!appShell && <Footer locale={locale} />}
   </body>
 </html>

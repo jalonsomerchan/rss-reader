@@ -183,6 +183,8 @@ describe('project smoke checks', () => {
     assert.match(reader, /pauseAutoObserver/);
     assert.match(reader, /DocumentFragment/);
     assert.match(reader, /renderedCount/);
+    assert.match(reader, /savedStorageKey/);
+    assert.match(reader, /renderSavedFeed/);
     assert.match(api, /JSON_CACHE/);
   });
 

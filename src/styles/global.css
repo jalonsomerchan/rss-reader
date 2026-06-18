@@ -64,12 +64,14 @@
 
 html {
   min-height: 100%;
+  overflow-x: hidden;
   scroll-behavior: smooth;
 }
 
 body {
   min-height: 100%;
   margin: 0;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary-soft), transparent 30%), transparent 32rem),
     var(--color-bg);

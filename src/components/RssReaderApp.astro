@@ -18,6 +18,10 @@ const labels = {
   justNow: t('reader.justNow'),
   noMoreNews: t('reader.noMoreNews'),
   readyStatus: t('reader.readyStatus'),
+  removeSaved: t('reader.removeSaved'),
+  saveArticle: t('reader.saveArticle'),
+  saved: t('reader.saved'),
+  savedArticle: t('reader.savedArticle'),
   savedCategories: t('reader.savedCategories'),
   selectOneCategory: t('reader.selectOneCategory'),
   settingsHint: t('reader.settings.hint'),
@@ -41,23 +45,13 @@ const labels = {
     <header class="reader-appbar">
       <div class="reader-brand">
         <span class="reader-brand__mark" aria-hidden="true">R</span>
-        <span>{t('reader.hero.eyebrow')}</span>
+        <span>{t('reader.app.name')}</span>
       </div>
-      <span class="reader-appbar__pulse" aria-hidden="true"></span>
+      <span class="reader-appbar__status">
+        <span aria-hidden="true"></span>
+        {t('reader.app.status')}
+      </span>
     </header>
-
-    <div class="reader-hero">
-      <div class="reader-hero__copy">
-        <p class="reader-eyebrow">{t('reader.hero.eyebrow')}</p>
-        <h1>{t('reader.hero.title')}</h1>
-        <p>{t('reader.hero.description')}</p>
-      </div>
-      <div class="reader-hero__preview" aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-    </div>
 
     <section class="reader-panel reader-onboarding" data-onboarding hidden>
       <div>
@@ -71,22 +65,32 @@ const labels = {
       </button>
     </section>
 
-    <div class="reader-app" data-reader-app hidden>
-      <div class="reader-tabs" role="tablist" aria-label={t('reader.tabs.label')}>
+    <div class="reader-app" data-reader-app>
+      <div class="reader-summary">
+        <p class="reader-eyebrow">{t('reader.hero.eyebrow')}</p>
+        <h1>{t('reader.hero.title')}</h1>
+        <p>{t('reader.hero.description')}</p>
+        <div class="reader-topic-strip" data-selected-categories aria-label={t('reader.selectedCategoriesLabel')}></div>
+      </div>
+
+      <nav class="reader-tabs" role="tablist" aria-label={t('reader.tabs.label')}>
         <button type="button" role="tab" data-tab="mine" aria-selected="true">
           <span>{t('reader.tabs.mine')}</span>
         </button>
         <button type="button" role="tab" data-tab="all" aria-selected="false">
           <span>{t('reader.tabs.all')}</span>
         </button>
+        <button type="button" role="tab" data-tab="saved" aria-selected="false">
+          <span>{t('reader.tabs.saved')}</span>
+        </button>
         <button type="button" role="tab" data-tab="settings" aria-selected="false">
           <span>{t('reader.tabs.settings')}</span>
         </button>
-      </div>
+      </nav>
 
       <div class="reader-feedback">
         <p class="reader-status" data-status aria-live="polite"></p>
-        <p class="reader-loading" data-loading hidden>{t('reader.loading')}</p>
+        <p class="reader-loading" data-loading>{t('reader.loading')}</p>
       </div>
 
       <section class="reader-feed-panel" data-panel="mine">
@@ -107,6 +111,15 @@ const labels = {
         <p class="reader-empty" data-empty="all" hidden>{t('reader.empty.all')}</p>
       </section>
 
+      <section class="reader-feed-panel" data-panel="saved" hidden>
+        <div class="reader-section-heading">
+          <h2>{t('reader.saved.title')}</h2>
+          <p>{t('reader.saved.description')}</p>
+        </div>
+        <div class="news-list" data-list="saved"></div>
+        <p class="reader-empty" data-empty="saved" hidden>{t('reader.empty.saved')}</p>
+      </section>
+
       <section class="reader-panel reader-settings" data-panel="settings" hidden>
         <div>
           <p class="reader-eyebrow">{t('reader.settings.eyebrow')}</p>
@@ -119,7 +132,7 @@ const labels = {
         </button>
       </section>
 
-      <button class="reader-load-more" type="button" data-load-more>{t('reader.loadMore')}</button>
+      <button class="reader-load-more" type="button" data-load-more hidden>{t('reader.loadMore')}</button>
       <div class="reader-sentinel" data-sentinel aria-hidden="true"></div>
     </div>
   </div>

@@ -8,7 +8,7 @@ const locale = defaultLocale;
 const t = useTranslations(locale);
 ---
 
-<BaseLayout title={t('home.title')} description={t('site.description')} locale={locale}>
+<BaseLayout title={t('home.title')} description={t('site.description')} locale={locale} appShell>
   <RssReaderApp locale={locale} />
   <a class="sr-only" href={siteConfig.repositoryUrl}>{t('home.repository')}</a>
 </BaseLayout>
