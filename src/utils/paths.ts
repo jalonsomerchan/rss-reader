@@ -32,5 +32,8 @@ export function stripBasePath(pathname: string, basePath = getBasePath()) {
 }
 
 export function getAbsoluteUrl(path: string, siteUrl: string) {
-  return new URL(path, siteUrl).toString();
+  const normalizedSiteUrl = siteUrl.endsWith('/') ? siteUrl : `${siteUrl}/`;
+  const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+
+  return new URL(normalizedPath, normalizedSiteUrl).toString();
 }
