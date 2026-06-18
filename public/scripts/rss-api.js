@@ -1,3 +1,5 @@
+import { readCachedJson, writeCachedJson } from './rss-cache.js';
+
 const MONTH_FORMATTER = new Intl.NumberFormat('en', {
   minimumIntegerDigits: 2,
   useGrouping: false,
@@ -11,7 +13,20 @@ export function getCleanApiBase(apiBase) {
 
 export async function fetchJson(apiBase, path) {
   const url = `${getCleanApiBase(apiBase)}${path}`;
+  const cachedData = readCachedJson(url);
 
+  if (cachedData) {
+    queueJsonRefresh(url, path).catch(() => {
+      // Stale cache is enough for the first paint; transient refresh errors should not break it.
+    });
+
+    return cachedData;
+  }
+
+  return queueJsonRefresh(url, path);
+}
+
+function queueJsonRefresh(url, path) {
   if (!JSON_CACHE.has(url)) {
     const request = fetch(url)
       .then((response) => {
@@ -21,9 +36,15 @@ export async function fetchJson(apiBase, path) {
 
         return response.json();
       })
+      .then((data) => {
+        writeCachedJson(url, data);
+        return data;
+      })
       .catch((error) => {
-        JSON_CACHE.delete(url);
         throw error;
+      })
+      .finally(() => {
+        JSON_CACHE.delete(url);
       });
 
     JSON_CACHE.set(url, request);
