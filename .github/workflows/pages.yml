@@ -17,6 +17,7 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   ASTRO_SITE: https://rss.alon.one
+  PUBLIC_SITE_URL: https://rss.alon.one
   ASTRO_BASE: /
 
 jobs:
