@@ -1,21 +1,46 @@
-.reader-loading {
-  display: inline-flex;
-  min-height: 1.5rem;
-  align-items: center;
+.reader-feedback {
+  display: grid;
   gap: var(--space-2);
-  font-weight: 750;
+}
+
+.reader-loading,
+.reader-processing {
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-primary), transparent 62%);
+  border-radius: var(--radius-full);
+  background:
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--color-accent-soft), transparent 20%), transparent 38%),
+    color-mix(in srgb, var(--color-primary-soft), var(--color-surface) 48%);
+  box-shadow: var(--shadow-xs);
+  color: var(--color-text);
+  font-size: 0.86rem;
+  font-weight: 820;
+}
+
+.reader-loading[hidden],
+.reader-processing[hidden] {
+  display: none;
 }
 
 .reader-loading::before,
+.reader-processing::before,
 .reader-load-more:disabled:not([hidden])::before {
   content: "";
-  width: 1rem;
-  height: 1rem;
+  width: 1.12rem;
+  height: 1.12rem;
   flex: 0 0 auto;
-  border: 2px solid color-mix(in srgb, currentColor, transparent 72%);
-  border-top-color: currentColor;
+  border: 3px solid color-mix(in srgb, var(--color-primary), transparent 76%);
+  border-top-color: var(--color-primary);
+  border-right-color: var(--color-accent);
   border-radius: var(--radius-full);
-  animation: reader-spinner 720ms linear infinite;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary-soft), transparent 34%);
+  animation: reader-spinner 680ms linear infinite;
 }
 
 .reader-load-more {
@@ -26,7 +51,12 @@
 }
 
 .reader-load-more:disabled:not([hidden]) {
-  opacity: 0.78;
+  opacity: 0.88;
+}
+
+.reader-shell[data-reader-busy] .reader-appbar__status span {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent-soft), transparent 25%);
 }
 
 @keyframes reader-spinner {
@@ -37,6 +67,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .reader-loading::before,
+  .reader-processing::before,
   .reader-load-more:disabled:not([hidden])::before {
     animation: none;
     border-style: dashed;

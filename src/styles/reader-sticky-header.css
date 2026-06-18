@@ -1,0 +1,16 @@
+.reader-surface {
+  overflow: visible;
+}
+
+.reader-appbar {
+  position: sticky;
+  top: 0;
+  z-index: calc(var(--z-header) + 2);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-border), transparent 15%);
+}
+
+@media (min-width: 48rem) {
+  .reader-surface {
+    overflow: visible;
+  }
+}
