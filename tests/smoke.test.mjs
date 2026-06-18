@@ -55,8 +55,10 @@ describe('project smoke checks', () => {
       'src/i18n/translations',
       'src/utils/paths.ts',
       'src/styles/global.css',
+      'src/styles/reader-pull-refresh.css',
       'public/sw.js',
       'public/scripts/register-sw.js',
+      'public/scripts/rss-pull-refresh.js',
     ].forEach((path) => {
       assert.equal(existsSync(join(root, path)), true, `${path} should exist`);
     });

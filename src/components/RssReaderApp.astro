@@ -3,6 +3,7 @@ import '../styles/reader.css';
 import '../styles/reader-menu.css';
 import '../styles/reader-news.css';
 import '../styles/reader-loading.css';
+import '../styles/reader-pull-refresh.css';
 import { rssConfig } from '../config/rss';
 import type { Locale } from '../config/site';
 import { useTranslations } from '../i18n/ui';
@@ -15,6 +16,7 @@ const { locale } = Astro.props;
 const t = useTranslations(locale);
 const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 const readerScriptUrl = `${baseUrl}scripts/rss-reader.js`;
+const pullRefreshScriptUrl = `${baseUrl}scripts/rss-pull-refresh.js`;
 const imageFallbackScriptUrl = `${baseUrl}scripts/rss-image-fallback.js`;
 const labels = {
   allCategories: t('reader.categoryFilter.all'),
@@ -110,6 +112,11 @@ const labels = {
     </section>
 
     <div class="reader-app" data-reader-app>
+      <div class="reader-pull-refresh" data-pull-refresh hidden aria-live="polite">
+        <span class="reader-pull-refresh__spinner" aria-hidden="true"></span>
+        <span>{t('reader.loading')}</span>
+      </div>
+
       <div class="reader-topic-strip" data-selected-categories aria-label={t('reader.selectedCategoriesLabel')}></div>
 
       <nav class="reader-tabs" role="tablist" aria-label={t('reader.tabs.label')}>
@@ -188,4 +195,5 @@ const labels = {
 </section>
 
 <script type="module" src={readerScriptUrl}></script>
+<script type="module" src={pullRefreshScriptUrl}></script>
 <script type="module" src={imageFallbackScriptUrl}></script>
