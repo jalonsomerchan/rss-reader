@@ -22,7 +22,10 @@ describe('reader menu enhancements', () => {
     assert.match(reader, /reader-sticky-header\.css/);
     assert.match(reader, /rss-menu-enhancements\.js/);
     assert.match(reader, /data-menu-search-input/);
-    assert.match(reader, /data-menu-page-sources/);
+    assert.match(reader, /data-main-view-target="my-sources"/);
+    assert.match(reader, /data-main-view-target="my-categories"/);
+    assert.doesNotMatch(reader, /data-menu-page="my-sources"/);
+    assert.doesNotMatch(reader, /data-menu-page="my-categories"/);
     assert.match(reader, /data-processing-indicator/);
     assert.match(script, /clearActiveFilters/);
     assert.match(script, /pulseProcessing/);
