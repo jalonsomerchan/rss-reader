@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import RssReaderApp from '../components/RssReaderApp.astro';
-import { defaultLocale } from '../config/site';
+import { defaultLocale, siteConfig } from '../config/site';
 import { useTranslations } from '../i18n/ui';
 
 const locale = defaultLocale;
@@ -10,4 +10,5 @@ const t = useTranslations(locale);
 
 <BaseLayout title={t('home.title')} description={t('site.description')} locale={locale}>
   <RssReaderApp locale={locale} />
+  <a class="sr-only" href={siteConfig.repositoryUrl}>{t('home.repository')}</a>
 </BaseLayout>
