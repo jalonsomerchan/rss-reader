@@ -117,11 +117,21 @@
   scrollbar-width: none;
 }
 
-.category-grid {
+.category-grid,
+.source-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
   gap: var(--space-2);
   min-width: 0;
+}
+
+.source-grid {
+  max-height: 17rem;
+  overflow-y: auto;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-soft);
 }
 
 .reader-topic-strip::-webkit-scrollbar {
@@ -129,7 +139,8 @@
 }
 
 .reader-topic-chip,
-.category-pill {
+.category-pill,
+.source-pill {
   display: inline-flex;
   min-height: 2.35rem;
   flex: 0 0 auto;
@@ -164,6 +175,22 @@
 
 .reader-onboarding {
   margin-top: var(--space-5);
+}
+
+.reader-settings-block {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.reader-settings-block h3 {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 850;
+  letter-spacing: -0.025em;
 }
 
 .reader-tabs {
@@ -227,7 +254,8 @@
 .reader-primary-action:focus-visible,
 .reader-load-more:focus-visible,
 .news-card__action:focus-visible,
-.category-pill:focus-within {
+.category-pill:focus-within,
+.source-pill:focus-within {
   outline: 3px solid color-mix(in srgb, var(--color-primary), transparent 58%);
   outline-offset: 2px;
 }
@@ -384,7 +412,8 @@
 .reader-tabs button:hover,
 .reader-primary-action:not(:disabled):hover,
 .reader-load-more:not(:disabled):hover,
-.category-pill:hover {
+.category-pill:hover,
+.source-pill:hover {
   transform: translateY(-1px);
 }
 
@@ -396,20 +425,23 @@
   padding: 0;
 }
 
-.category-pill {
+.category-pill,
+.source-pill {
   gap: var(--space-2);
   padding: 0 var(--space-3);
   min-width: 0;
   cursor: pointer;
 }
 
-.category-pill span {
+.category-pill span,
+.source-pill span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.category-pill input {
+.category-pill input,
+.source-pill input {
   width: 1rem;
   height: 1rem;
   margin: 0;
@@ -419,6 +451,12 @@
 .category-pill:has(input:checked) {
   border-color: color-mix(in srgb, var(--color-primary), transparent 45%);
   background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+.source-pill:has(input:checked) {
+  border-color: color-mix(in srgb, var(--color-danger), transparent 45%);
+  background: var(--color-danger-soft);
   color: var(--color-text);
 }
 
@@ -439,6 +477,10 @@
 
 .reader-empty {
   padding: 0 var(--space-4) var(--space-4);
+}
+
+.reader-empty--compact {
+  padding: 0;
 }
 
 .reader-status,
@@ -470,7 +512,8 @@
   .reader-primary-action,
   .reader-load-more,
   .news-card__action,
-  .category-pill {
+  .category-pill,
+  .source-pill {
     transition: none;
   }
 }
