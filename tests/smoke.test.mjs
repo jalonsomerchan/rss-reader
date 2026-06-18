@@ -220,6 +220,49 @@ describe('project smoke checks', () => {
     assert.match(reader, /isAutoLoadReady/);
     assert.match(reader, /scheduleAutoObserverResume/);
     assert.match(reader, /pauseAutoObserver/);
-    assert.match(api, /archiveMonth/);
+    assert.match(reader, /DocumentFragment/);
+    assert.match(reader, /renderedCount/);
+    assert.match(reader, /savedStorageKey/);
+    assert.match(reader, /renderSavedFeed/);
+    assert.match(reader, /ignoredSourcesStorageKey/);
+    assert.match(reader, /renderIgnoredSourcePicker/);
+    assert.match(reader, /matchesVisibleItem/);
+    assert.match(api, /JSON_CACHE/);
+  });
+
+  it('keeps starter links and labels configurable or translated', () => {
+    const siteConfig = readText('src/config/site.ts');
+    const header = readText('src/components/Header.astro');
+    const home = readText('src/pages/index.astro');
+    const localizedHome = readText('src/pages/[locale]/index.astro');
+    const envExample = readText('.env.example');
+
+    assert.match(siteConfig, /repositoryUrl/);
+    assert.match(envExample, /PUBLIC_REPOSITORY_URL/);
+    assert.match(header, /t\('nav\.main'\)/);
+    assert.match(home, /siteConfig\.repositoryUrl/);
+    assert.match(localizedHome, /siteConfig\.repositoryUrl/);
+    assert.doesNotMatch(home, /https:\/\/github\.com\/jalonsomerchan\/astro-template/);
+    assert.doesNotMatch(localizedHome, /https:\/\/github\.com\/jalonsomerchan\/astro-template/);
+  });
+
+  it('includes GitHub workflows for CI and Pages', () => {
+    const pagesWorkflow = readText('.github/workflows/pages.yml');
+    const ciWorkflow = readText('.github/workflows/ci.yml');
+
+    assert.match(pagesWorkflow, /actions\/deploy-pages@v4/);
+    assert.match(pagesWorkflow, /npm run build/);
+    assert.match(pagesWorkflow, /npm test/);
+    assert.match(ciWorkflow, /pull_request/);
+    assert.match(ciWorkflow, /npm run build/);
+    assert.match(ciWorkflow, /npm test/);
+  });
+
+  it('keeps useful project documentation available', () => {
+    const readme = readText('README.md');
+
+    assert.match(readme, /\S/, 'README.md should not be empty');
+    assert.equal(existsSync(join(root, 'agents.md')), true, 'agents.md should exist');
+    assert.equal(existsSync(join(root, 'docs/design-system.md')), true, 'docs/design-system.md should exist');
   });
 });
