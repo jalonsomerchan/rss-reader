@@ -1,0 +1,10 @@
+.news-card__title {
+  display: block;
+  overflow: visible;
+  color: var(--color-text);
+  font-size: 1.3rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
