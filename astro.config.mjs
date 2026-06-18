@@ -14,6 +14,7 @@ const base = process.env.ASTRO_BASE ?? (process.env.GITHUB_ACTIONS ? `/${reposit
 export default defineConfig({
   site,
   base,
+  output: 'static',
 
   i18n: {
     defaultLocale: 'es',
@@ -24,9 +25,8 @@ export default defineConfig({
   },
 
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
   },
 
-  integrations: [mdx(), sitemap(), icon()]
-
+  integrations: [mdx(), sitemap(), icon()],
 });
