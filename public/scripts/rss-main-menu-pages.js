@@ -297,10 +297,9 @@ if (root) {
 
     hideMainPages();
 
-    const selector = type === 'category'
-      ? `[data-menu-category-filter="${escapeCssValue(value)}"]`
-      : `[data-menu-source-filter="${escapeCssValue(value)}"]`;
-    const proxy = root.querySelector(selector);
+    const selector = type === 'category' ? '[data-menu-category-filter]' : '[data-menu-source-filter]';
+    const dataKey = type === 'category' ? 'menuCategoryFilter' : 'menuSourceFilter';
+    const proxy = [...root.querySelectorAll(selector)].find((button) => button.dataset[dataKey] === value);
 
     proxy?.click();
   }
@@ -435,13 +434,5 @@ if (root) {
 
   function slugify(value) {
     return normalizeText(value).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'grupo';
-  }
-
-  function escapeCssValue(value) {
-    if (window.CSS?.escape) {
-      return window.CSS.escape(value);
-    }
-
-    return String(value).replaceAll('"', '\\"');
   }
 }
