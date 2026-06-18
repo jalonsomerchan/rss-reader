@@ -60,6 +60,7 @@ npm ci
 ```text
 /
 ├── public/
+│   ├── .nojekyll
 │   ├── favicon.svg
 │   ├── favicon.ico
 │   ├── og-image.svg
@@ -125,14 +126,30 @@ Después usa las claves con `useTranslations(locale)`. Los tests comprueban que 
 
 ## GitHub Pages
 
-El despliegue está en `.github/workflows/pages.yml`.
+El despliegue está en `.github/workflows/pages.yml` y se ejecuta al hacer push a `main` o manualmente desde Actions.
 
-Por defecto, cuando corre en GitHub Actions, `astro.config.mjs` calcula automáticamente:
+El workflow:
 
-- `site`: `https://OWNER.github.io`
-- `base`: `/NOMBRE_DEL_REPO`
+1. Instala dependencias con `npm ci`.
+2. Ejecuta `npm test`.
+3. Genera el build estático con `npm run build`.
+4. Sube `dist/` como artifact de GitHub Pages.
+5. Publica con `actions/deploy-pages@v4`.
 
-Puedes sobrescribirlo con variables de entorno:
+`astro.config.mjs` está preparado para GitHub Pages:
+
+- `output: 'static'` genera una web totalmente estática.
+- `site` se calcula como `https://OWNER.github.io` si no se define `ASTRO_SITE`.
+- `base` se calcula como `/NOMBRE_DEL_REPO` dentro de GitHub Actions, por lo que este repo se publica bajo `/rss-reader/`.
+- `public/.nojekyll` se copia a `dist/.nojekyll` para evitar procesamiento de Jekyll en Pages.
+
+URL esperada tras fusionar en `main` y tener Pages configurado con origen GitHub Actions:
+
+```txt
+https://jalonsomerchan.github.io/rss-reader/
+```
+
+Puedes sobrescribirlo con variables de entorno si despliegas en dominio propio:
 
 ```env
 ASTRO_SITE=https://example.com
