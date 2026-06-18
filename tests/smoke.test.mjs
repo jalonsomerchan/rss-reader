@@ -171,6 +171,16 @@ describe('project smoke checks', () => {
     assert.match(readme, /https:\/\/jalonsomerchan\.github\.io\/rss-reader\//);
   });
 
+  it('keeps the RSS reader protected against runaway infinite scroll', () => {
+    const reader = readText('public/scripts/rss-reader.js');
+
+    assert.match(reader, /AUTO_LOAD_COOLDOWN_MS/);
+    assert.match(reader, /loadingMore/);
+    assert.match(reader, /pauseAutoObserver/);
+    assert.match(reader, /DocumentFragment/);
+    assert.match(reader, /renderedCount/);
+  });
+
   it('keeps starter links and labels configurable or translated', () => {
     const siteConfig = readText('src/config/site.ts');
     const header = readText('src/components/Header.astro');
