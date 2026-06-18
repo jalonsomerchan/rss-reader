@@ -1,0 +1,103 @@
+---
+import '../styles/reader.css';
+import { rssConfig } from '../config/rss';
+import type { Locale } from '../config/site';
+import { useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const readerScriptUrl = `${baseUrl}scripts/rss-reader.js`;
+const labels = {
+  copiedLink: t('reader.copiedLink'),
+  errorLoading: t('reader.errorLoading'),
+  justNow: t('reader.justNow'),
+  noMoreNews: t('reader.noMoreNews'),
+  readyStatus: t('reader.readyStatus'),
+  savedCategories: t('reader.savedCategories'),
+  selectOneCategory: t('reader.selectOneCategory'),
+  settingsHint: t('reader.settings.hint'),
+  share: t('reader.share'),
+  shareError: t('reader.shareError'),
+};
+---
+
+<section
+  class="reader-shell"
+  data-rss-reader
+  data-api-base={rssConfig.apiBase}
+  data-storage-key={rssConfig.storageKey}
+  data-page-size={rssConfig.pageSize}
+  data-archive-month-lookback={rssConfig.archiveMonthLookback}
+  data-archive-source-batch-size={rssConfig.archiveSourceBatchSize}
+  data-locale={locale}
+  data-labels={JSON.stringify(labels)}
+>
+  <div class="reader-hero">
+    <p class="reader-eyebrow">{t('reader.hero.eyebrow')}</p>
+    <h1>{t('reader.hero.title')}</h1>
+    <p>{t('reader.hero.description')}</p>
+  </div>
+
+  <section class="reader-panel reader-onboarding" data-onboarding hidden>
+    <div>
+      <p class="reader-eyebrow">{t('reader.setup.eyebrow')}</p>
+      <h2>{t('reader.setup.title')}</h2>
+      <p>{t('reader.setup.description')}</p>
+    </div>
+    <div class="category-grid" data-category-list="setup" aria-label={t('reader.categoriesLabel')}></div>
+    <button class="reader-primary-action" type="button" data-save-categories="setup">
+      {t('reader.saveSelection')}
+    </button>
+  </section>
+
+  <div class="reader-app" data-reader-app hidden>
+    <div class="reader-tabs" role="tablist" aria-label={t('reader.tabs.label')}>
+      <button type="button" role="tab" data-tab="mine" aria-selected="true">{t('reader.tabs.mine')}</button>
+      <button type="button" role="tab" data-tab="all" aria-selected="false">{t('reader.tabs.all')}</button>
+      <button type="button" role="tab" data-tab="settings" aria-selected="false">{t('reader.tabs.settings')}</button>
+    </div>
+
+    <p class="reader-status" data-status aria-live="polite"></p>
+    <p class="reader-loading" data-loading hidden>{t('reader.loading')}</p>
+
+    <section class="reader-feed-panel" data-panel="mine">
+      <div class="reader-section-heading">
+        <h2>{t('reader.mine.title')}</h2>
+        <p>{t('reader.mine.description')}</p>
+      </div>
+      <div class="news-list" data-list="mine"></div>
+      <p class="reader-empty" data-empty="mine" hidden>{t('reader.empty.mine')}</p>
+    </section>
+
+    <section class="reader-feed-panel" data-panel="all" hidden>
+      <div class="reader-section-heading">
+        <h2>{t('reader.all.title')}</h2>
+        <p>{t('reader.all.description')}</p>
+      </div>
+      <div class="news-list" data-list="all"></div>
+      <p class="reader-empty" data-empty="all" hidden>{t('reader.empty.all')}</p>
+    </section>
+
+    <section class="reader-panel reader-settings" data-panel="settings" hidden>
+      <div>
+        <p class="reader-eyebrow">{t('reader.settings.eyebrow')}</p>
+        <h2>{t('reader.settings.title')}</h2>
+        <p>{t('reader.settings.description')}</p>
+      </div>
+      <div class="category-grid" data-category-list="settings" aria-label={t('reader.categoriesLabel')}></div>
+      <button class="reader-primary-action" type="button" data-save-categories="settings">
+        {t('reader.saveSelection')}
+      </button>
+    </section>
+
+    <button class="reader-load-more" type="button" data-load-more>{t('reader.loadMore')}</button>
+    <div class="reader-sentinel" data-sentinel aria-hidden="true"></div>
+  </div>
+</section>
+
+<script type="module" src={readerScriptUrl}></script>
