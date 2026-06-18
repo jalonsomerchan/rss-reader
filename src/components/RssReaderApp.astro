@@ -13,8 +13,10 @@ const t = useTranslations(locale);
 const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 const readerScriptUrl = `${baseUrl}scripts/rss-reader.js`;
 const labels = {
+  allCategories: t('reader.categoryFilter.all'),
   copiedLink: t('reader.copiedLink'),
   errorLoading: t('reader.errorLoading'),
+  filterCategory: t('reader.categoryFilter.aria'),
   justNow: t('reader.justNow'),
   noMoreNews: t('reader.noMoreNews'),
   readyStatus: t('reader.readyStatus'),
@@ -66,12 +68,7 @@ const labels = {
     </section>
 
     <div class="reader-app" data-reader-app>
-      <div class="reader-summary">
-        <p class="reader-eyebrow">{t('reader.hero.eyebrow')}</p>
-        <h1>{t('reader.hero.title')}</h1>
-        <p>{t('reader.hero.description')}</p>
-        <div class="reader-topic-strip" data-selected-categories aria-label={t('reader.selectedCategoriesLabel')}></div>
-      </div>
+      <div class="reader-topic-strip" data-selected-categories aria-label={t('reader.selectedCategoriesLabel')}></div>
 
       <nav class="reader-tabs" role="tablist" aria-label={t('reader.tabs.label')}>
         <button type="button" role="tab" data-tab="mine" aria-selected="true">

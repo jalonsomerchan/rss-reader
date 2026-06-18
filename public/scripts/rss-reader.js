@@ -5,7 +5,6 @@ import {
   getArchivePath,
   getCurrentMonthCursor,
   getPreviousMonth,
-  getSourcesForTab,
   normalizeNews,
 } from './rss-api.js';
 
@@ -55,6 +54,7 @@ if (root) {
 
   const state = {
     activeTab: 'mine',
+    activeCategoryFilter: null,
     sources: [],
     categories: [],
     selectedCategories: [],
@@ -128,6 +128,14 @@ if (root) {
 
     elements.setupCategories?.addEventListener('change', updateCategoryActions);
     elements.settingsCategories?.addEventListener('change', updateCategoryActions);
+    elements.selectedCategories?.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const button = target?.closest('[data-category-filter]');
+
+      if (button) {
+        setCategoryFilter(button.dataset.categoryFilter || null);
+      }
+    });
 
     if ('IntersectionObserver' in window && elements.sentinel) {
       state.observer = new IntersectionObserver((entries) => {
@@ -244,8 +252,13 @@ if (root) {
     }
 
     state.selectedCategories = categories;
+
+    if (state.activeCategoryFilter && !state.selectedCategories.includes(state.activeCategoryFilter)) {
+      state.activeCategoryFilter = null;
+    }
+
     localStorage.setItem(config.storageKey, JSON.stringify(categories));
-    state.feeds.mine = createFeed('mine');
+    resetFeeds();
     renderCategoryPickers();
     renderSelectedCategories();
     setStatus(labels.savedCategories, 'success');
@@ -283,12 +296,59 @@ if (root) {
 
     elements.selectedCategories.innerHTML = '';
 
-    state.selectedCategories.slice(0, 8).forEach((category) => {
-      const chip = document.createElement('span');
-      chip.className = 'reader-topic-chip';
-      chip.textContent = category;
-      elements.selectedCategories.append(chip);
+    if (state.selectedCategories.length === 0) {
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    fragment.append(createCategoryFilterChip('', labels.allCategories ?? 'Todas'));
+
+    state.selectedCategories.forEach((category) => {
+      fragment.append(createCategoryFilterChip(category, category));
     });
+
+    elements.selectedCategories.append(fragment);
+  }
+
+  function createCategoryFilterChip(category, text) {
+    const button = document.createElement('button');
+    const isActive = state.activeCategoryFilter === (category || null);
+
+    button.type = 'button';
+    button.className = 'reader-topic-chip';
+    button.dataset.categoryFilter = category;
+    button.setAttribute('aria-pressed', String(isActive));
+    button.textContent = text;
+
+    if (category) {
+      button.setAttribute('aria-label', getCategoryFilterLabel(category));
+    }
+
+    return button;
+  }
+
+  function getCategoryFilterLabel(category) {
+    return (labels.filterCategory ?? 'Filtrar por {{category}}')
+      .replaceAll('{{category}}', category)
+      .replaceAll('{category}', category);
+  }
+
+  function setCategoryFilter(category) {
+    const nextCategory = category || null;
+
+    if (state.activeCategoryFilter === nextCategory) {
+      return;
+    }
+
+    state.activeCategoryFilter = nextCategory;
+    resetFeeds();
+    renderSelectedCategories();
+    showApp(state.activeTab);
+  }
+
+  function resetFeeds() {
+    state.feeds.mine = createFeed('mine');
+    state.feeds.all = createFeed('all');
   }
 
   async function ensureFeed(tab) {
@@ -325,7 +385,11 @@ if (root) {
     const sourceMap = new Map(state.sources.map((source) => [source.id, source]));
 
     try {
-      if (tab === 'all') {
+      if (state.activeCategoryFilter) {
+        const data = await fetchJson(config.apiBase, 'indexes/categorias.json');
+        const items = data.categorias?.[state.activeCategoryFilter] ?? [];
+        addUniqueNews(feed, items.map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesActiveCategory));
+      } else if (tab === 'all') {
         const data = await fetchJson(config.apiBase, 'indexes/portada.json');
         addUniqueNews(feed, (data.noticias ?? []).map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))));
       } else {
@@ -394,7 +458,9 @@ if (root) {
           })
         );
 
-        const news = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
+        const news = results
+          .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+          .filter(matchesActiveCategory);
 
         return addUniqueNews(feed, news);
       }
@@ -408,10 +474,25 @@ if (root) {
 
   function getArchiveSources(feed) {
     if (!feed.archiveSources) {
-      feed.archiveSources = getSourcesForTab(state.sources, feed.tab, state.selectedCategories);
+      const categoryFilters = getFeedCategoryFilters(feed.tab);
+      feed.archiveSources = categoryFilters.length === 0
+        ? state.sources
+        : state.sources.filter((source) => source.categorias?.some((category) => categoryFilters.includes(category)));
     }
 
     return feed.archiveSources;
+  }
+
+  function getFeedCategoryFilters(tab) {
+    if (state.activeCategoryFilter) {
+      return [state.activeCategoryFilter];
+    }
+
+    return tab === 'mine' ? state.selectedCategories : [];
+  }
+
+  function matchesActiveCategory(item) {
+    return !state.activeCategoryFilter || item.categorias?.includes(state.activeCategoryFilter);
   }
 
   function queueAutoLoad() {
@@ -533,14 +614,15 @@ if (root) {
 
     list.innerHTML = '';
 
+    const visibleItems = state.savedItems.filter(matchesActiveCategory);
     const fragment = document.createDocumentFragment();
-    state.savedItems.forEach((item) => {
+    visibleItems.forEach((item) => {
       fragment.append(createNewsCard(item));
     });
 
     list.append(fragment);
-    empty.hidden = state.savedItems.length > 0;
-    setStatus(state.savedItems.length > 0 ? labels.readyStatus : '');
+    empty.hidden = visibleItems.length > 0;
+    setStatus(visibleItems.length > 0 ? labels.readyStatus : '');
   }
 
   function hasRenderOrderChanged(list, visibleItems, renderedCount) {
