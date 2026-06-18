@@ -159,6 +159,18 @@ describe('project smoke checks', () => {
     assert.match(robots, /sitemap-index\.xml/);
   });
 
+  it('keeps GitHub Pages deployment explicit and static', () => {
+    const astroConfig = readText('astro.config.mjs');
+    const pagesWorkflow = readText('.github/workflows/pages.yml');
+    const readme = readText('README.md');
+
+    assert.match(astroConfig, /output:\s*['\"]static['\"]/);
+    assert.equal(existsSync(join(root, 'public/.nojekyll')), true, 'public/.nojekyll should exist');
+    assert.match(pagesWorkflow, /actions\/upload-pages-artifact@v3/);
+    assert.match(pagesWorkflow, /path:\s*.\/dist/);
+    assert.match(readme, /https:\/\/jalonsomerchan\.github\.io\/rss-reader\//);
+  });
+
   it('keeps starter links and labels configurable or translated', () => {
     const siteConfig = readText('src/config/site.ts');
     const header = readText('src/components/Header.astro');

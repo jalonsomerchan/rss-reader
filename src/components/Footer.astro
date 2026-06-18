@@ -11,7 +11,7 @@ const { locale } = Astro.props;
 const t = useTranslations(locale);
 ---
 
-<footer class="border-t border-[var(--color-border)]">
+<footer class="border-t border-[var(--color-border)] bg-[var(--color-surface)]">
   <Container class="py-6 text-sm text-[var(--color-muted)]">
     <p>© {new Date().getFullYear()} {siteConfig.name}. {t('footer.createdWith')}</p>
   </Container>
