@@ -14,14 +14,14 @@ function readText(path) {
 }
 
 function parseConstString(source, name) {
-  const match = source.match(new RegExp(`export\\s+const\\s+${name}\\s*=\\s*['"]([^'"]+)['"]`));
+  const match = source.match(new RegExp(`export\s+const\s+${name}\s*=\s*['"]([^'"]+)['"]`));
   assert.ok(match, `Could not find exported const ${name}`);
 
   return match[1];
 }
 
 function parseConstStringArray(source, name) {
-  const match = source.match(new RegExp(`export\\s+const\\s+${name}\\s*=\\s*\\[([^\\]]+)\\]`));
+  const match = source.match(new RegExp(`export\s+const\s+${name}\s*=\s*\[([^\]]+)\]`));
   assert.ok(match, `Could not find exported array const ${name}`);
 
   const values = [...match[1].matchAll(/['"]([^'"]+)['"]/g)].map(([, value]) => value);
@@ -55,6 +55,8 @@ describe('project smoke checks', () => {
       'src/i18n/translations',
       'src/utils/paths.ts',
       'src/styles/global.css',
+      'public/sw.js',
+      'public/scripts/register-sw.js',
     ].forEach((path) => {
       assert.equal(existsSync(join(root, path)), true, `${path} should exist`);
     });
@@ -94,7 +96,7 @@ describe('project smoke checks', () => {
     const { defaultLocale, locales } = getConfiguredI18n();
 
     assert.match(astroConfig, /i18n/);
-    assert.match(astroConfig, new RegExp(`defaultLocale:\\s*['"]${defaultLocale}['"]`));
+    assert.match(astroConfig, new RegExp(`defaultLocale:\s*['"]${defaultLocale}['"]`));
 
     locales.forEach((locale) => {
       assert.match(
@@ -136,6 +138,7 @@ describe('project smoke checks', () => {
       );
       assert.ok(translations['home.title'], `${locale}.json should include home.title`);
       assert.ok(translations['nav.main'], `${locale}.json should include nav.main`);
+      assert.ok(translations['reader.ignoredSources.title'], `${locale}.json should include reader.ignoredSources.title`);
     });
   });
 
@@ -157,7 +160,36 @@ describe('project smoke checks', () => {
     assert.match(pathHelpers, /getAbsoluteUrl/);
     assert.match(pathHelpers, /lastPart\.endsWith\('\/'\)/);
     assert.match(manifest, /start_url/);
+    assert.match(manifest, /scope/);
     assert.match(robots, /sitemap-index\.xml/);
+  });
+
+  it('keeps PWA install metadata wired to public icons', () => {
+    const layout = readText('src/layouts/BaseLayout.astro');
+    const manifest = readText('src/pages/manifest.webmanifest.ts');
+    const serviceWorker = readText('public/sw.js');
+    const registerServiceWorker = readText('public/scripts/register-sw.js');
+
+    [
+      'public/icons/android-chrome-192x192.png',
+      'public/icons/android-chrome-512x512.png',
+      'public/icons/apple-touch-icon.png',
+      'public/icons/favicon-32x32.png',
+      'public/icons/favicon-16x16.png',
+    ].forEach((path) => {
+      assert.equal(existsSync(join(root, path)), true, `${path} should exist`);
+    });
+
+    assert.match(layout, /apple-touch-icon/);
+    assert.match(layout, /theme-color/);
+    assert.match(layout, /scripts\/register-sw\.js/);
+    assert.match(manifest, /android-chrome-192x192\.png/);
+    assert.match(manifest, /android-chrome-512x512\.png/);
+    assert.match(manifest, /purpose:\s*'any maskable'/);
+    assert.match(serviceWorker, /CACHE_NAME/);
+    assert.match(serviceWorker, /self\.registration\.scope/);
+    assert.match(serviceWorker, /manifest\.webmanifest/);
+    assert.match(registerServiceWorker, /serviceWorker\.register/);
   });
 
   it('keeps GitHub Pages deployment explicit and static', () => {
@@ -190,6 +222,9 @@ describe('project smoke checks', () => {
     assert.match(reader, /renderedCount/);
     assert.match(reader, /savedStorageKey/);
     assert.match(reader, /renderSavedFeed/);
+    assert.match(reader, /ignoredSourcesStorageKey/);
+    assert.match(reader, /renderIgnoredSourcePicker/);
+    assert.match(reader, /matchesVisibleItem/);
     assert.match(api, /JSON_CACHE/);
   });
 
