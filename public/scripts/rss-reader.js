@@ -460,8 +460,8 @@ if (root) {
 
     const fragment = document.createDocumentFragment();
 
-    visibleItems.slice(feed.renderedCount).forEach((item) => {
-      fragment.append(createNewsCard(item));
+    visibleItems.slice(feed.renderedCount).forEach((item, offset) => {
+      fragment.append(createNewsCard(item, feed.renderedCount + offset));
     });
 
     if (fragment.childNodes.length > 0) {
@@ -491,10 +491,14 @@ if (root) {
     return false;
   }
 
-  function createNewsCard(item) {
+  function createNewsCard(item, index) {
     const article = document.createElement('article');
     article.className = 'news-card';
     article.dataset.url = item.url;
+
+    if (index === 0) {
+      article.classList.add('news-card--featured');
+    }
 
     const link = document.createElement('a');
     link.className = 'news-card__link';
@@ -509,8 +513,13 @@ if (root) {
       const image = document.createElement('img');
       image.src = item.imagen;
       image.alt = item.titulo;
-      image.loading = 'lazy';
+      image.loading = index === 0 ? 'eager' : 'lazy';
       image.decoding = 'async';
+
+      if (index === 0) {
+        image.fetchPriority = 'high';
+      }
+
       media.append(image);
     } else {
       const placeholder = document.createElement('div');
@@ -524,25 +533,72 @@ if (root) {
 
     const meta = document.createElement('p');
     meta.className = 'news-card__meta';
-    meta.textContent = [formatRelativeTime(item.fecha), item.fuenteTitle].filter(Boolean).join(' · ');
+
+    const time = document.createElement('span');
+    time.className = 'news-card__time';
+    time.textContent = formatRelativeTime(item.fecha);
+
+    const source = document.createElement('span');
+    source.className = 'news-card__source';
+    source.textContent = item.fuenteTitle;
+
+    [time, source].forEach((node) => {
+      if (node.textContent) {
+        meta.append(node);
+      }
+    });
 
     const title = document.createElement('h2');
     title.className = 'news-card__title';
     title.textContent = item.titulo;
 
     body.append(meta, title);
+
+    const tags = createCategoryTags(item.categorias);
+    if (tags) {
+      body.append(tags);
+    }
+
     link.append(media, body);
 
     const share = document.createElement('button');
     share.type = 'button';
     share.className = 'news-card__share';
-    share.textContent = labels.share;
     share.setAttribute('aria-label', `${labels.share}: ${item.titulo}`);
     share.addEventListener('click', () => shareNews(item));
 
+    const shareIcon = document.createElement('span');
+    shareIcon.className = 'news-card__share-icon';
+    shareIcon.textContent = '↗';
+    shareIcon.setAttribute('aria-hidden', 'true');
+
+    const shareText = document.createElement('span');
+    shareText.textContent = labels.share;
+
+    share.append(shareIcon, shareText);
     article.append(link, share);
 
     return article;
+  }
+
+  function createCategoryTags(categories = []) {
+    const visibleCategories = categories.filter(Boolean).slice(0, 2);
+
+    if (visibleCategories.length === 0) {
+      return null;
+    }
+
+    const tags = document.createElement('div');
+    tags.className = 'news-card__tags';
+
+    visibleCategories.forEach((category) => {
+      const tag = document.createElement('span');
+      tag.className = 'news-card__tag';
+      tag.textContent = category;
+      tags.append(tag);
+    });
+
+    return tags;
   }
 
   function formatRelativeTime(dateValue) {
