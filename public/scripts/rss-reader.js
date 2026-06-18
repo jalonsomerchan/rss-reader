@@ -9,6 +9,9 @@ import {
   normalizeNews,
 } from './rss-api.js';
 
+const AUTO_LOAD_COOLDOWN_MS = 900;
+const AUTO_LOAD_ROOT_MARGIN = '180px 0px';
+
 const root = document.querySelector('[data-rss-reader]');
 
 if (root) {
@@ -16,9 +19,9 @@ if (root) {
   const config = {
     apiBase: root.dataset.apiBase ?? '',
     storageKey: root.dataset.storageKey ?? 'rss-reader:selected-categories',
-    pageSize: Number(root.dataset.pageSize ?? 12),
+    pageSize: Number(root.dataset.pageSize ?? 8),
     archiveMonthLookback: Number(root.dataset.archiveMonthLookback ?? 12),
-    archiveSourceBatchSize: Number(root.dataset.archiveSourceBatchSize ?? 4),
+    archiveSourceBatchSize: Number(root.dataset.archiveSourceBatchSize ?? 2),
     locale: root.dataset.locale ?? document.documentElement.lang ?? 'es',
   };
 
@@ -50,6 +53,9 @@ if (root) {
     sources: [],
     categories: [],
     selectedCategories: [],
+    observer: null,
+    autoLoadTimer: 0,
+    lastAutoLoadAt: 0,
     feeds: {
       mine: createFeed('mine'),
       all: createFeed('all'),
@@ -69,8 +75,11 @@ if (root) {
       items: [],
       seenUrls: new Set(),
       visible: config.pageSize,
+      renderedCount: 0,
+      archiveSources: null,
       seeded: false,
       loading: false,
+      loadingMore: false,
       exhausted: false,
       monthCursor: getCurrentMonthCursor(),
       sourceIndex: 0,
@@ -104,23 +113,24 @@ if (root) {
 
     elements.saveSetup?.addEventListener('click', () => saveCategoriesFrom(elements.setupCategories));
     elements.saveSettings?.addEventListener('click', () => saveCategoriesFrom(elements.settingsCategories));
-    elements.loadMore?.addEventListener('click', () => loadMoreActiveItems());
+    elements.loadMore?.addEventListener('click', () => loadMoreActiveItems({ source: 'manual' }));
 
     elements.setupCategories?.addEventListener('change', updateCategoryActions);
     elements.settingsCategories?.addEventListener('change', updateCategoryActions);
 
     if ('IntersectionObserver' in window && elements.sentinel) {
-      const observer = new IntersectionObserver((entries) => {
+      state.observer = new IntersectionObserver((entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
-          loadMoreActiveItems();
+          queueAutoLoad();
         }
-      }, { rootMargin: '360px 0px' });
+      }, { rootMargin: AUTO_LOAD_ROOT_MARGIN });
 
-      observer.observe(elements.sentinel);
+      resumeAutoObserver();
     }
   }
 
   function showOnboarding() {
+    pauseAutoObserver();
     elements.onboarding.hidden = false;
     elements.app.hidden = true;
     setStatus('');
@@ -145,11 +155,13 @@ if (root) {
     elements.sentinel.hidden = tab === 'settings';
 
     if (tab === 'settings') {
+      pauseAutoObserver();
       setStatus(labels.settingsHint);
       updateCategoryActions();
       return;
     }
 
+    resumeAutoObserver();
     await ensureFeed(tab);
   }
 
@@ -269,19 +281,30 @@ if (root) {
 
   async function fillFeedUntilNeeded(tab) {
     const feed = state.feeds[tab];
+    const sourceCount = getArchiveSources(feed).length || 1;
+    const maxArchiveBatches = Math.max(
+      1,
+      Math.ceil(sourceCount / config.archiveSourceBatchSize) * config.archiveMonthLookback
+    );
+    let attempts = 0;
 
-    while (feed.items.length < feed.visible && !feed.exhausted) {
+    while (feed.items.length < feed.visible && !feed.exhausted && attempts < maxArchiveBatches) {
       const added = await loadArchiveBatch(tab);
+      attempts += 1;
 
       if (added === 0 && feed.exhausted) {
         break;
       }
     }
+
+    if (attempts >= maxArchiveBatches && feed.items.length < feed.visible) {
+      feed.exhausted = true;
+    }
   }
 
   async function loadArchiveBatch(tab) {
     const feed = state.feeds[tab];
-    const archiveSources = getSourcesForTab(state.sources, tab, state.selectedCategories);
+    const archiveSources = getArchiveSources(feed);
 
     if (feed.loading || archiveSources.length === 0) {
       feed.exhausted = archiveSources.length === 0;
@@ -322,14 +345,59 @@ if (root) {
     }
   }
 
-  async function loadMoreActiveItems() {
+  function getArchiveSources(feed) {
+    if (!feed.archiveSources) {
+      feed.archiveSources = getSourcesForTab(state.sources, feed.tab, state.selectedCategories);
+    }
+
+    return feed.archiveSources;
+  }
+
+  function queueAutoLoad() {
+    if (state.activeTab === 'settings' || document.hidden || state.autoLoadTimer) {
+      return;
+    }
+
+    const elapsed = Date.now() - state.lastAutoLoadAt;
+    const delay = Math.max(0, AUTO_LOAD_COOLDOWN_MS - elapsed);
+
+    state.autoLoadTimer = window.setTimeout(() => {
+      state.autoLoadTimer = 0;
+      state.lastAutoLoadAt = Date.now();
+      loadMoreActiveItems({ source: 'auto' });
+    }, delay);
+  }
+
+  async function loadMoreActiveItems({ source = 'manual' } = {}) {
     if (state.activeTab === 'settings') {
       return;
     }
 
-    const feed = state.feeds[state.activeTab];
-    feed.visible += config.pageSize;
-    await ensureFeed(state.activeTab);
+    const tab = state.activeTab;
+    const feed = state.feeds[tab];
+
+    if (feed.loadingMore || (feed.exhausted && feed.visible >= feed.items.length)) {
+      return;
+    }
+
+    feed.loadingMore = true;
+    setLoadMoreEnabled(false);
+
+    if (source === 'auto') {
+      pauseAutoObserver();
+    }
+
+    try {
+      feed.visible += config.pageSize;
+      await ensureFeed(tab);
+    } finally {
+      feed.loadingMore = false;
+      setLoadMoreEnabled(true);
+
+      if (source === 'auto') {
+        resumeAutoObserver();
+      }
+    }
   }
 
   function renderFeed(tab) {
@@ -341,22 +409,54 @@ if (root) {
       return;
     }
 
-    list.innerHTML = '';
-
     const visibleItems = feed.items.slice(0, feed.visible);
-    visibleItems.forEach((item) => list.append(createNewsCard(item)));
 
+    if (feed.renderedCount === 0 && list.childElementCount > 0) {
+      list.innerHTML = '';
+    }
+
+    if (hasRenderOrderChanged(list, visibleItems, feed.renderedCount)) {
+      list.innerHTML = '';
+      feed.renderedCount = 0;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    visibleItems.slice(feed.renderedCount).forEach((item) => {
+      fragment.append(createNewsCard(item));
+    });
+
+    if (fragment.childNodes.length > 0) {
+      list.append(fragment);
+    }
+
+    feed.renderedCount = visibleItems.length;
     empty.hidden = visibleItems.length > 0;
-    elements.loadMore.hidden = feed.exhausted && feed.visible >= feed.items.length;
+    elements.loadMore.hidden = tab === 'settings' || (feed.exhausted && feed.visible >= feed.items.length);
 
     if (visibleItems.length > 0) {
       setStatus(feed.exhausted ? labels.noMoreNews : labels.readyStatus);
     }
   }
 
+  function hasRenderOrderChanged(list, visibleItems, renderedCount) {
+    if (renderedCount === 0 || renderedCount > visibleItems.length) {
+      return renderedCount > visibleItems.length;
+    }
+
+    for (let index = 0; index < renderedCount; index += 1) {
+      if (list.children[index]?.dataset.url !== visibleItems[index]?.url) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   function createNewsCard(item) {
     const article = document.createElement('article');
     article.className = 'news-card';
+    article.dataset.url = item.url;
 
     const link = document.createElement('a');
     link.className = 'news-card__link';
@@ -444,6 +544,24 @@ if (root) {
       }
     } catch {
       setStatus(labels.shareError, 'error');
+    }
+  }
+
+  function pauseAutoObserver() {
+    if (state.observer && elements.sentinel) {
+      state.observer.unobserve(elements.sentinel);
+    }
+  }
+
+  function resumeAutoObserver() {
+    if (state.observer && elements.sentinel && !elements.sentinel.hidden && !elements.app.hidden) {
+      state.observer.observe(elements.sentinel);
+    }
+  }
+
+  function setLoadMoreEnabled(isEnabled) {
+    if (elements.loadMore) {
+      elements.loadMore.disabled = !isEnabled;
     }
   }
 
