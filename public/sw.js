@@ -1,0 +1,88 @@
+const CACHE_NAME = 'rss-reader-pwa-v1';
+const PRECACHE_PATHS = [
+  './',
+  './manifest.webmanifest',
+  './icons/android-chrome-192x192.png',
+  './icons/android-chrome-512x512.png',
+  './icons/apple-touch-icon.png',
+  './icons/favicon-32x32.png',
+  './icons/favicon-16x16.png',
+];
+
+function toScopeUrl(path) {
+  return new URL(path, self.registration.scope).toString();
+}
+
+async function putInCache(request, response) {
+  if (!response || response.status !== 200) {
+    return;
+  }
+
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put(request, response.clone());
+}
+
+async function getCachedOrFetch(request) {
+  const cached = await caches.match(request);
+
+  if (cached) {
+    return cached;
+  }
+
+  const response = await fetch(request);
+  await putInCache(request, response);
+
+  return response;
+}
+
+async function getNavigationResponse(request) {
+  try {
+    const response = await fetch(request);
+    await putInCache(request, response);
+
+    return response;
+  } catch {
+    return (await caches.match(request)) ?? caches.match(toScopeUrl('./'));
+  }
+}
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_PATHS.map(toScopeUrl)))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(request.url);
+
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (request.mode === 'navigate') {
+    event.respondWith(getNavigationResponse(request));
+    return;
+  }
+
+  if (['image', 'script', 'style', 'font'].includes(request.destination) || url.pathname.endsWith('.webmanifest')) {
+    event.respondWith(getCachedOrFetch(request));
+  }
+});
