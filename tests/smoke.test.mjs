@@ -155,6 +155,7 @@ describe('project smoke checks', () => {
     assert.match(pathHelpers, /withBasePath/);
     assert.match(pathHelpers, /stripBasePath/);
     assert.match(pathHelpers, /getAbsoluteUrl/);
+    assert.match(pathHelpers, /lastPart\.endsWith\('\\/'\)/);
     assert.match(manifest, /start_url/);
     assert.match(robots, /sitemap-index\.xml/);
   });
@@ -168,6 +169,9 @@ describe('project smoke checks', () => {
     assert.equal(existsSync(join(root, 'public/.nojekyll')), true, 'public/.nojekyll should exist');
     assert.match(pagesWorkflow, /actions\/upload-pages-artifact@v3/);
     assert.match(pagesWorkflow, /path:\s*.\/dist/);
+    assert.match(pagesWorkflow, /ASTRO_SITE:\s*https:\/\/rss\.alon\.one/);
+    assert.match(pagesWorkflow, /ASTRO_BASE:\s*\//);
+    assert.equal(existsSync(join(root, 'public/CNAME')), true, 'public/CNAME should exist');
     assert.match(readme, /https:\/\/jalonsomerchan\.github\.io\/rss-reader\//);
   });
 
