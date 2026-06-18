@@ -14,14 +14,14 @@ function readText(path) {
 }
 
 function parseConstString(source, name) {
-  const match = source.match(new RegExp(`export\s+const\s+${name}\s*=\s*['"]([^'"]+)['"]`));
+  const match = source.match(new RegExp(String.raw`export\s+const\s+${name}\s*=\s*['"]([^'"]+)['"]`));
   assert.ok(match, `Could not find exported const ${name}`);
 
   return match[1];
 }
 
 function parseConstStringArray(source, name) {
-  const match = source.match(new RegExp(`export\s+const\s+${name}\s*=\s*\[([^\]]+)\]`));
+  const match = source.match(new RegExp(String.raw`export\s+const\s+${name}\s*=\s*\[([^\]]+)\]`));
   assert.ok(match, `Could not find exported array const ${name}`);
 
   const values = [...match[1].matchAll(/['"]([^'"]+)['"]/g)].map(([, value]) => value);
@@ -96,7 +96,7 @@ describe('project smoke checks', () => {
     const { defaultLocale, locales } = getConfiguredI18n();
 
     assert.match(astroConfig, /i18n/);
-    assert.match(astroConfig, new RegExp(`defaultLocale:\s*['"]${defaultLocale}['"]`));
+    assert.match(astroConfig, new RegExp(String.raw`defaultLocale:\s*['"]${defaultLocale}['"]`));
 
     locales.forEach((locale) => {
       assert.match(
