@@ -11,6 +11,7 @@ import {
 
 const AUTO_LOAD_COOLDOWN_MS = 900;
 const AUTO_LOAD_ROOT_MARGIN = '180px 0px';
+const AUTO_OBSERVER_RESUME_DELAY_MS = 350;
 
 const root = document.querySelector('[data-rss-reader]');
 
@@ -77,6 +78,7 @@ if (root) {
       visible: config.pageSize,
       renderedCount: 0,
       archiveSources: null,
+      pendingLoad: null,
       seeded: false,
       loading: false,
       loadingMore: false,
@@ -124,8 +126,6 @@ if (root) {
           queueAutoLoad();
         }
       }, { rootMargin: AUTO_LOAD_ROOT_MARGIN });
-
-      resumeAutoObserver();
     }
   }
 
@@ -161,8 +161,9 @@ if (root) {
       return;
     }
 
-    resumeAutoObserver();
+    pauseAutoObserver();
     await ensureFeed(tab);
+    scheduleAutoObserverResume(tab);
   }
 
   function renderCategoryPickers() {
@@ -248,15 +249,30 @@ if (root) {
   async function ensureFeed(tab) {
     const feed = state.feeds[tab];
 
-    setLoading(true);
-
-    if (!feed.seeded) {
-      await seedFeed(tab);
+    if (feed.pendingLoad) {
+      return feed.pendingLoad;
     }
 
-    await fillFeedUntilNeeded(tab);
-    renderFeed(tab);
-    setLoading(false);
+    feed.pendingLoad = (async () => {
+      setLoading(true);
+
+      try {
+        if (!feed.seeded) {
+          await seedFeed(tab);
+        }
+
+        await fillFeedUntilNeeded(tab);
+        renderFeed(tab);
+      } finally {
+        feed.pendingLoad = null;
+
+        if (state.activeTab === tab) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return feed.pendingLoad;
   }
 
   async function seedFeed(tab) {
@@ -354,7 +370,7 @@ if (root) {
   }
 
   function queueAutoLoad() {
-    if (state.activeTab === 'settings' || document.hidden || state.autoLoadTimer) {
+    if (!isAutoLoadReady() || state.autoLoadTimer) {
       return;
     }
 
@@ -363,9 +379,31 @@ if (root) {
 
     state.autoLoadTimer = window.setTimeout(() => {
       state.autoLoadTimer = 0;
+
+      if (!isAutoLoadReady()) {
+        return;
+      }
+
       state.lastAutoLoadAt = Date.now();
       loadMoreActiveItems({ source: 'auto' });
     }, delay);
+  }
+
+  function isAutoLoadReady() {
+    const feed = state.feeds[state.activeTab];
+
+    return Boolean(
+      feed &&
+        state.activeTab !== 'settings' &&
+        !document.hidden &&
+        !elements.app.hidden &&
+        !elements.sentinel.hidden &&
+        feed.seeded &&
+        !feed.pendingLoad &&
+        !feed.loading &&
+        !feed.loadingMore &&
+        !(feed.exhausted && feed.visible >= feed.items.length)
+    );
   }
 
   async function loadMoreActiveItems({ source = 'manual' } = {}) {
@@ -376,7 +414,7 @@ if (root) {
     const tab = state.activeTab;
     const feed = state.feeds[tab];
 
-    if (feed.loadingMore || (feed.exhausted && feed.visible >= feed.items.length)) {
+    if (feed.pendingLoad || feed.loadingMore || (feed.exhausted && feed.visible >= feed.items.length)) {
       return;
     }
 
@@ -395,7 +433,7 @@ if (root) {
       setLoadMoreEnabled(true);
 
       if (source === 'auto') {
-        resumeAutoObserver();
+        scheduleAutoObserverResume(tab);
       }
     }
   }
@@ -551,6 +589,14 @@ if (root) {
     if (state.observer && elements.sentinel) {
       state.observer.unobserve(elements.sentinel);
     }
+  }
+
+  function scheduleAutoObserverResume(tab) {
+    window.setTimeout(() => {
+      if (state.activeTab === tab && isAutoLoadReady()) {
+        resumeAutoObserver();
+      }
+    }, AUTO_OBSERVER_RESUME_DELAY_MS);
   }
 
   function resumeAutoObserver() {
