@@ -28,6 +28,8 @@ const routePath = stripBasePath(Astro.url.pathname);
 const canonicalUrl = getAbsoluteUrl(withBasePath(routePath), siteConfig.url);
 const imageUrl = getAbsoluteUrl(withBasePath(image), siteConfig.url);
 const ogLocale = locale === 'es' ? 'es_ES' : 'en_US';
+const themeColor = '#2563eb';
+const registerPwaUrl = withBasePath('scripts/register-sw.js');
 ---
 
 <!doctype html>
@@ -38,9 +40,16 @@ const ogLocale = locale === 'es' ? 'es_ES' : 'en_US';
     <meta name="generator" content={Astro.generator} />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
+    <meta name="theme-color" content={themeColor} />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content={siteConfig.name} />
     <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/svg+xml" href={withBasePath('favicon.svg')} />
     <link rel="icon" href={withBasePath('favicon.ico')} />
+    <link rel="icon" type="image/png" sizes="32x32" href={withBasePath('icons/favicon-32x32.png')} />
+    <link rel="icon" type="image/png" sizes="16x16" href={withBasePath('icons/favicon-16x16.png')} />
+    <link rel="apple-touch-icon" sizes="180x180" href={withBasePath('icons/apple-touch-icon.png')} />
     <link rel="manifest" href={withBasePath('manifest.webmanifest')} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={pageTitle} />
@@ -52,6 +61,7 @@ const ogLocale = locale === 'es' ? 'es_ES' : 'en_US';
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
+    <script type="module" src={registerPwaUrl}></script>
   </head>
   <body>
     {!appShell && <Header locale={locale} />}

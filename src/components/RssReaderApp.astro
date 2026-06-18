@@ -124,6 +124,16 @@ const labels = {
           <p>{t('reader.settings.description')}</p>
         </div>
         <div class="category-grid" data-category-list="settings" aria-label={t('reader.categoriesLabel')}></div>
+        <div class="reader-settings-block">
+          <div>
+            <h3>{t('reader.ignoredSources.title')}</h3>
+            <p>{t('reader.ignoredSources.description')}</p>
+          </div>
+          <div class="source-grid" data-source-list="settings" aria-label={t('reader.ignoredSources.label')}></div>
+          <p class="reader-empty reader-empty--compact" data-empty-ignored-sources hidden>
+            {t('reader.ignoredSources.empty')}
+          </p>
+        </div>
         <button class="reader-primary-action" type="button" data-save-categories="settings">
           {t('reader.saveSelection')}
         </button>
