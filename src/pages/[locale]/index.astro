@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import RssReaderApp from '../../components/RssReaderApp.astro';
-import { defaultLocale, locales, type Locale } from '../../config/site';
+import { defaultLocale, locales, siteConfig, type Locale } from '../../config/site';
 import { isLocale, useTranslations } from '../../i18n/ui';
 
 export function getStaticPaths() {
@@ -19,4 +19,5 @@ const t = useTranslations(locale);
 
 <BaseLayout title={t('home.title')} description={t('site.description')} locale={locale}>
   <RssReaderApp locale={locale} />
+  <a class="sr-only" href={siteConfig.repositoryUrl}>{t('home.repository')}</a>
 </BaseLayout>
