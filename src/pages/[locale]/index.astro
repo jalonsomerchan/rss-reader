@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Button from '../../components/Button.astro';
+import Container from '../../components/Container.astro';
+import { defaultLocale, locales, siteConfig, type Locale } from '../../config/site';
+import { isLocale, useTranslations } from '../../i18n/ui';
+
+export function getStaticPaths() {
+  return locales
+    .filter((locale) => locale !== defaultLocale)
+    .map((locale) => ({
+      params: { locale },
+    }));
+}
+
+const localeParam = Astro.params.locale;
+const locale: Locale = isLocale(localeParam) ? localeParam : defaultLocale;
+const t = useTranslations(locale);
+---
+
+<BaseLayout title={siteConfig.name} description={t('site.description')} locale={locale}>
+  <Container class="py-20">
+    <section class="mx-auto max-w-3xl text-center">
+      <p class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-primary)]">{t('home.eyebrow')}</p>
+      <h1 class="text-4xl font-black tracking-tight sm:text-6xl">{t('home.title')}</h1>
+      <p class="mx-auto mt-6 max-w-2xl text-lg text-[var(--color-muted)]">
+        {t('home.description')}
+      </p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3">
+        <Button href="https://docs.astro.build/">{t('home.docs')}</Button>
+        <Button href={siteConfig.repositoryUrl} variant="secondary">{t('home.repository')}</Button>
+      </div>
+    </section>
+  </Container>
+</BaseLayout>

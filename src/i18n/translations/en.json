@@ -1,0 +1,16 @@
+{
+  "site.description": "Base template for creating projects with Astro.",
+  "nav.home": "Home",
+  "nav.main": "Main navigation",
+  "footer.createdWith": "Created with Astro.",
+  "home.eyebrow": "Astro starter",
+  "home.title": "Base template for Astro projects",
+  "home.description": "A simple base with Tailwind, MDX, sitemap, technical SEO, GitHub Pages and smoke tests so you can start projects without repeating setup.",
+  "home.docs": "Astro documentation",
+  "home.repository": "Repository",
+  "notFound.title": "Page not found",
+  "notFound.description": "The page you are looking for does not exist.",
+  "notFound.eyebrow": "Error 404",
+  "notFound.message": "The page you are looking for does not exist, has moved or has not been created yet.",
+  "notFound.backHome": "Back home"
+}

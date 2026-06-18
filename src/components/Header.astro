@@ -1,0 +1,32 @@
+---
+import Container from './Container.astro';
+import { localeLabels, siteConfig, type Locale } from '../config/site';
+import { getAlternateLocales, getLocalizedPath, useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const homeUrl = getLocalizedPath('/', locale);
+const alternateLocales = getAlternateLocales(locale);
+---
+
+<header class="border-b border-[var(--color-border)] bg-white/80 backdrop-blur">
+  <Container class="flex items-center justify-between py-4">
+    <a class="font-bold tracking-tight" href={homeUrl}>{siteConfig.name}</a>
+    <nav aria-label={t('nav.main')} class="flex items-center gap-4 text-sm text-[var(--color-muted)]">
+      <a class="hover:text-[var(--color-text)]" href={homeUrl}>{t('nav.home')}</a>
+      {alternateLocales.map((alternateLocale) => (
+        <a
+          class="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs hover:text-[var(--color-text)]"
+          href={getLocalizedPath('/', alternateLocale)}
+          hreflang={alternateLocale}
+        >
+          {localeLabels[alternateLocale]}
+        </a>
+      ))}
+    </nav>
+  </Container>
+</header>

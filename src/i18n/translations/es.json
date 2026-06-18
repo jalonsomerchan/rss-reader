@@ -1,0 +1,16 @@
+{
+  "site.description": "Plantilla base para crear proyectos con Astro.",
+  "nav.home": "Inicio",
+  "nav.main": "Navegación principal",
+  "footer.createdWith": "Creado con Astro.",
+  "home.eyebrow": "Astro starter",
+  "home.title": "Plantilla base para proyectos Astro",
+  "home.description": "Una base sencilla con Tailwind, MDX, sitemap, SEO técnico, GitHub Pages y tests smoke para empezar proyectos sin repetir configuración.",
+  "home.docs": "Documentación de Astro",
+  "home.repository": "Repositorio",
+  "notFound.title": "Página no encontrada",
+  "notFound.description": "La página que buscas no existe.",
+  "notFound.eyebrow": "Error 404",
+  "notFound.message": "La página que buscas no existe, se ha movido o todavía no ha sido creada.",
+  "notFound.backHome": "Volver al inicio"
+}

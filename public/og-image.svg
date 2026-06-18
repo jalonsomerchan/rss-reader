@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Astro Template</title>
+  <desc id="desc">Imagen social por defecto para la plantilla Astro.</desc>
+  <rect width="1200" height="630" fill="#111827" />
+  <circle cx="980" cy="120" r="180" fill="#2563eb" opacity="0.35" />
+  <circle cx="170" cy="520" r="220" fill="#7c3aed" opacity="0.3" />
+  <text x="96" y="260" fill="#ffffff" font-family="Arial, sans-serif" font-size="72" font-weight="800">Astro Template</text>
+  <text x="100" y="340" fill="#d1d5db" font-family="Arial, sans-serif" font-size="34">Plantilla base para proyectos Astro</text>
+</svg>
