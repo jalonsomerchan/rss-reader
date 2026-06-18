@@ -1,0 +1,79 @@
+.reader-shell {
+  overscroll-behavior-y: contain;
+}
+
+.reader-pull-refresh {
+  position: fixed;
+  inset-block-start: calc(env(safe-area-inset-top) + var(--space-3));
+  left: 50%;
+  z-index: calc(var(--z-header) + 2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: calc(100% - (var(--space-4) * 2));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-border), transparent 10%);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-surface), transparent 4%);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -145%);
+  transition:
+    opacity var(--transition-base),
+    transform var(--transition-base);
+  backdrop-filter: blur(18px);
+}
+
+.reader-pull-refresh[hidden] {
+  display: none;
+}
+
+.reader-pull-refresh__spinner {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  border: 2px solid color-mix(in srgb, currentColor, transparent 72%);
+  border-top-color: currentColor;
+  border-radius: var(--radius-full);
+  animation: reader-spinner 720ms linear infinite;
+}
+
+.reader-shell[data-pull-state="pulling"] .reader-surface,
+.reader-shell[data-pull-state="ready"] .reader-surface {
+  transform: translateY(var(--reader-pull-offset, 0px));
+  transition: none;
+}
+
+.reader-shell[data-pull-state="settling"] .reader-surface,
+.reader-shell[data-pull-state="refreshing"] .reader-surface {
+  transform: translateY(var(--reader-pull-offset, 0px));
+  transition: transform var(--transition-base);
+}
+
+.reader-shell[data-pull-state="pulling"] .reader-pull-refresh,
+.reader-shell[data-pull-state="ready"] .reader-pull-refresh,
+.reader-shell[data-pull-state="refreshing"] .reader-pull-refresh {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.reader-shell[data-pull-state="ready"] .reader-pull-refresh,
+.reader-shell[data-pull-state="refreshing"] .reader-pull-refresh {
+  color: var(--color-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-pull-refresh,
+  .reader-shell[data-pull-state] .reader-surface {
+    transition: none;
+  }
+
+  .reader-pull-refresh__spinner {
+    animation: none;
+    border-style: dashed;
+  }
+}
