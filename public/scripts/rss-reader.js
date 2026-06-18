@@ -16,10 +16,12 @@ const root = document.querySelector('[data-rss-reader]');
 
 if (root) {
   const labels = JSON.parse(root.dataset.labels ?? '{}');
+  const storageKey = root.dataset.storageKey ?? 'rss-reader:selected-categories';
   const config = {
     apiBase: root.dataset.apiBase ?? '',
-    storageKey: root.dataset.storageKey ?? 'rss-reader:selected-categories',
-    savedStorageKey: `${root.dataset.storageKey ?? 'rss-reader:selected-categories'}:saved-news`,
+    storageKey,
+    ignoredSourcesStorageKey: `${storageKey}:ignored-sources`,
+    savedStorageKey: `${storageKey}:saved-news`,
     pageSize: Number(root.dataset.pageSize ?? 8),
     archiveMonthLookback: Number(root.dataset.archiveMonthLookback ?? 12),
     archiveSourceBatchSize: Number(root.dataset.archiveSourceBatchSize ?? 2),
@@ -31,6 +33,8 @@ if (root) {
     onboarding: root.querySelector('[data-onboarding]'),
     setupCategories: root.querySelector('[data-category-list="setup"]'),
     settingsCategories: root.querySelector('[data-category-list="settings"]'),
+    ignoredSources: root.querySelector('[data-source-list="settings"]'),
+    ignoredSourcesEmpty: root.querySelector('[data-empty-ignored-sources]'),
     saveSetup: root.querySelector('[data-save-categories="setup"]'),
     saveSettings: root.querySelector('[data-save-categories="settings"]'),
     tabs: [...root.querySelectorAll('[data-tab]')],
@@ -58,6 +62,8 @@ if (root) {
     sources: [],
     categories: [],
     selectedCategories: [],
+    ignoredSourceIds: new Set(),
+    draftIgnoredSourceIds: new Set(),
     savedItems: [],
     savedUrls: new Set(),
     observer: null,
@@ -70,6 +76,7 @@ if (root) {
   };
 
   const relativeTimeFormatter = new Intl.RelativeTimeFormat(config.locale, { numeric: 'auto' });
+  const sourceTitleSorter = new Intl.Collator(config.locale, { sensitivity: 'base' });
 
   init().catch(() => {
     setStatus(labels.errorLoading, 'error');
@@ -100,6 +107,8 @@ if (root) {
     state.sources = await fetchJson(config.apiBase, 'sources.json');
     state.categories = getAllCategories(state.sources);
     state.selectedCategories = readSelectedCategories().filter((category) => state.categories.includes(category));
+    state.ignoredSourceIds = readIgnoredSourceIds();
+    state.draftIgnoredSourceIds = new Set(state.ignoredSourceIds);
     state.savedItems = readSavedItems();
     state.savedUrls = new Set(state.savedItems.map((item) => item.url).filter(Boolean));
 
@@ -127,7 +136,20 @@ if (root) {
     elements.loadMore?.addEventListener('click', () => loadMoreActiveItems({ source: 'manual' }));
 
     elements.setupCategories?.addEventListener('change', updateCategoryActions);
-    elements.settingsCategories?.addEventListener('change', updateCategoryActions);
+    elements.settingsCategories?.addEventListener('change', () => {
+      updateCategoryActions();
+      renderIgnoredSourcePicker(getCheckedCategories(elements.settingsCategories));
+    });
+    elements.ignoredSources?.addEventListener('change', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const input = target?.closest('input[data-ignore-source]');
+
+      if (!input) {
+        return;
+      }
+
+      updateDraftIgnoredSource(input.value, input.checked);
+    });
     elements.selectedCategories?.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const button = target?.closest('[data-category-filter]');
@@ -173,6 +195,9 @@ if (root) {
 
     if (tab === 'settings') {
       pauseAutoObserver();
+      state.draftIgnoredSourceIds = new Set(state.ignoredSourceIds);
+      renderCategoryPicker(elements.settingsCategories);
+      renderIgnoredSourcePicker(getCheckedCategories(elements.settingsCategories));
       setStatus(labels.settingsHint);
       updateCategoryActions();
       return;
@@ -192,6 +217,7 @@ if (root) {
   function renderCategoryPickers() {
     renderCategoryPicker(elements.setupCategories);
     renderCategoryPicker(elements.settingsCategories);
+    renderIgnoredSourcePicker(state.selectedCategories);
     updateCategoryActions();
   }
 
@@ -222,6 +248,39 @@ if (root) {
     });
   }
 
+  function renderIgnoredSourcePicker(categories) {
+    if (!elements.ignoredSources) {
+      return;
+    }
+
+    const sources = getSourcesForCategories(categories);
+    elements.ignoredSources.innerHTML = '';
+
+    if (elements.ignoredSourcesEmpty) {
+      elements.ignoredSourcesEmpty.hidden = sources.length > 0;
+    }
+
+    sources.forEach((source, index) => {
+      const id = `ignored-source-${index}`;
+      const label = document.createElement('label');
+      label.className = 'source-pill';
+      label.htmlFor = id;
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.id = id;
+      input.value = source.id;
+      input.dataset.ignoreSource = 'true';
+      input.checked = state.draftIgnoredSourceIds.has(source.id);
+
+      const text = document.createElement('span');
+      text.textContent = source.title ?? source.id;
+
+      label.append(input, text);
+      elements.ignoredSources.append(label);
+    });
+  }
+
   function updateCategoryActions() {
     const setupCount = getCheckedCategories(elements.setupCategories).length;
     const settingsCount = getCheckedCategories(elements.settingsCategories).length;
@@ -243,6 +302,32 @@ if (root) {
     return [...container.querySelectorAll('input:checked')].map((input) => input.value);
   }
 
+  function getSourcesForCategories(categories) {
+    const selected = new Set(categories);
+
+    return state.sources
+      .filter((source) => source.id && source.categorias?.some((category) => selected.has(category)))
+      .sort((a, b) => sourceTitleSorter.compare(a.title ?? a.id, b.title ?? b.id));
+  }
+
+  function updateDraftIgnoredSource(sourceId, isIgnored) {
+    if (!sourceId) {
+      return;
+    }
+
+    if (isIgnored) {
+      state.draftIgnoredSourceIds.add(sourceId);
+    } else {
+      state.draftIgnoredSourceIds.delete(sourceId);
+    }
+  }
+
+  function getVisibleIgnoredSourceIds(categories) {
+    const visibleSourceIds = new Set(getSourcesForCategories(categories).map((source) => source.id));
+
+    return [...state.draftIgnoredSourceIds].filter((sourceId) => visibleSourceIds.has(sourceId));
+  }
+
   function saveCategoriesFrom(container) {
     const categories = getCheckedCategories(container);
 
@@ -251,7 +336,13 @@ if (root) {
       return;
     }
 
+    const isSettings = container === elements.settingsCategories;
     state.selectedCategories = categories;
+
+    if (isSettings) {
+      state.ignoredSourceIds = new Set(getVisibleIgnoredSourceIds(categories));
+      persistIgnoredSourceIds();
+    }
 
     if (state.activeCategoryFilter && !state.selectedCategories.includes(state.activeCategoryFilter)) {
       state.activeCategoryFilter = null;
@@ -273,6 +364,21 @@ if (root) {
     } catch {
       return [];
     }
+  }
+
+  function readIgnoredSourceIds() {
+    try {
+      const value = JSON.parse(localStorage.getItem(config.ignoredSourcesStorageKey) ?? '[]');
+      const sourceIds = new Set(state.sources.map((source) => source.id).filter(Boolean));
+
+      return new Set(Array.isArray(value) ? value.filter((sourceId) => sourceIds.has(sourceId)) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  function persistIgnoredSourceIds() {
+    localStorage.setItem(config.ignoredSourcesStorageKey, JSON.stringify([...state.ignoredSourceIds]));
   }
 
   function readSavedItems() {
@@ -388,14 +494,14 @@ if (root) {
       if (state.activeCategoryFilter) {
         const data = await fetchJson(config.apiBase, 'indexes/categorias.json');
         const items = data.categorias?.[state.activeCategoryFilter] ?? [];
-        addUniqueNews(feed, items.map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesActiveCategory));
+        addUniqueNews(feed, items.map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
       } else if (tab === 'all') {
         const data = await fetchJson(config.apiBase, 'indexes/portada.json');
-        addUniqueNews(feed, (data.noticias ?? []).map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))));
+        addUniqueNews(feed, (data.noticias ?? []).map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
       } else {
         const data = await fetchJson(config.apiBase, 'indexes/categorias.json');
         const items = state.selectedCategories.flatMap((category) => data.categorias?.[category] ?? []);
-        addUniqueNews(feed, items.map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))));
+        addUniqueNews(feed, items.map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
       }
     } catch {
       setStatus(labels.errorLoading, 'error');
@@ -460,7 +566,7 @@ if (root) {
 
         const news = results
           .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-          .filter(matchesActiveCategory);
+          .filter(matchesVisibleItem);
 
         return addUniqueNews(feed, news);
       }
@@ -475,9 +581,11 @@ if (root) {
   function getArchiveSources(feed) {
     if (!feed.archiveSources) {
       const categoryFilters = getFeedCategoryFilters(feed.tab);
-      feed.archiveSources = categoryFilters.length === 0
+      const sources = categoryFilters.length === 0
         ? state.sources
         : state.sources.filter((source) => source.categorias?.some((category) => categoryFilters.includes(category)));
+
+      feed.archiveSources = sources.filter((source) => !isIgnoredSource(source.id));
     }
 
     return feed.archiveSources;
@@ -491,8 +599,16 @@ if (root) {
     return tab === 'mine' ? state.selectedCategories : [];
   }
 
+  function matchesVisibleItem(item) {
+    return matchesActiveCategory(item) && !isIgnoredSource(item.fuenteId);
+  }
+
   function matchesActiveCategory(item) {
     return !state.activeCategoryFilter || item.categorias?.includes(state.activeCategoryFilter);
+  }
+
+  function isIgnoredSource(sourceId) {
+    return Boolean(sourceId && state.ignoredSourceIds.has(sourceId));
   }
 
   function queueAutoLoad() {
@@ -614,7 +730,7 @@ if (root) {
 
     list.innerHTML = '';
 
-    const visibleItems = state.savedItems.filter(matchesActiveCategory);
+    const visibleItems = state.savedItems.filter(matchesVisibleItem);
     const fragment = document.createDocumentFragment();
     visibleItems.forEach((item) => {
       fragment.append(createNewsCard(item));
