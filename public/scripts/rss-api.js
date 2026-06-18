@@ -3,18 +3,33 @@ const MONTH_FORMATTER = new Intl.NumberFormat('en', {
   useGrouping: false,
 });
 
+const JSON_CACHE = new Map();
+
 export function getCleanApiBase(apiBase) {
   return apiBase.endsWith('/') ? apiBase : `${apiBase}/`;
 }
 
 export async function fetchJson(apiBase, path) {
-  const response = await fetch(`${getCleanApiBase(apiBase)}${path}`);
+  const url = `${getCleanApiBase(apiBase)}${path}`;
 
-  if (!response.ok) {
-    throw new Error(`Could not fetch ${path}`);
+  if (!JSON_CACHE.has(url)) {
+    const request = fetch(url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Could not fetch ${path}`);
+        }
+
+        return response.json();
+      })
+      .catch((error) => {
+        JSON_CACHE.delete(url);
+        throw error;
+      });
+
+    JSON_CACHE.set(url, request);
   }
 
-  return response.json();
+  return JSON_CACHE.get(url);
 }
 
 export function getAllCategories(sources) {

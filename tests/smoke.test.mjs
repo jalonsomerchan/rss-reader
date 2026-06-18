@@ -14,7 +14,7 @@ function readText(path) {
 }
 
 function parseConstString(source, name) {
-  const match = source.match(new RegExp(`export\\s+const\\s+${name}\\s*=\\s*['\"]([^'\"]+)['\"]`));
+  const match = source.match(new RegExp(`export\\s+const\\s+${name}\\s*=\\s*['"]([^'"]+)['"]`));
   assert.ok(match, `Could not find exported const ${name}`);
 
   return match[1];
@@ -24,7 +24,7 @@ function parseConstStringArray(source, name) {
   const match = source.match(new RegExp(`export\\s+const\\s+${name}\\s*=\\s*\\[([^\\]]+)\\]`));
   assert.ok(match, `Could not find exported array const ${name}`);
 
-  const values = [...match[1].matchAll(/['\"]([^'\"]+)['\"]/g)].map(([, value]) => value);
+  const values = [...match[1].matchAll(/['"]([^'"]+)['"]/g)].map(([, value]) => value);
   assert.ok(values.length > 0, `${name} should contain at least one value`);
 
   return values;
@@ -94,12 +94,12 @@ describe('project smoke checks', () => {
     const { defaultLocale, locales } = getConfiguredI18n();
 
     assert.match(astroConfig, /i18n/);
-    assert.match(astroConfig, new RegExp(`defaultLocale:\\s*['\"]${defaultLocale}['\"]`));
+    assert.match(astroConfig, new RegExp(`defaultLocale:\\s*['"]${defaultLocale}['"]`));
 
     locales.forEach((locale) => {
       assert.match(
         astroConfig,
-        new RegExp(`['\"]${locale}['\"]`),
+        new RegExp(`['"]${locale}['"]`),
         `${locale} should be configured in Astro i18n locales`
       );
       assert.equal(
@@ -148,8 +148,8 @@ describe('project smoke checks', () => {
 
     [layout, manifest, robots, i18nHelper].forEach((source) => {
       assert.match(source, /withBasePath|getLocalizedPath|stripBasePath/);
-      assert.doesNotMatch(source, /href=\"\//);
-      assert.doesNotMatch(source, /src=\"\//);
+      assert.doesNotMatch(source, /href="\//);
+      assert.doesNotMatch(source, /src="\//);
     });
 
     assert.match(pathHelpers, /withBasePath/);
@@ -164,7 +164,7 @@ describe('project smoke checks', () => {
     const pagesWorkflow = readText('.github/workflows/pages.yml');
     const readme = readText('README.md');
 
-    assert.match(astroConfig, /output:\s*['\"]static['\"]/);
+    assert.match(astroConfig, /output:\s*['"]static['"]/);
     assert.equal(existsSync(join(root, 'public/.nojekyll')), true, 'public/.nojekyll should exist');
     assert.match(pagesWorkflow, /actions\/upload-pages-artifact@v3/);
     assert.match(pagesWorkflow, /path:\s*.\/dist/);
@@ -173,12 +173,17 @@ describe('project smoke checks', () => {
 
   it('keeps the RSS reader protected against runaway infinite scroll', () => {
     const reader = readText('public/scripts/rss-reader.js');
+    const api = readText('public/scripts/rss-api.js');
 
     assert.match(reader, /AUTO_LOAD_COOLDOWN_MS/);
     assert.match(reader, /loadingMore/);
+    assert.match(reader, /pendingLoad/);
+    assert.match(reader, /isAutoLoadReady/);
+    assert.match(reader, /scheduleAutoObserverResume/);
     assert.match(reader, /pauseAutoObserver/);
     assert.match(reader, /DocumentFragment/);
     assert.match(reader, /renderedCount/);
+    assert.match(api, /JSON_CACHE/);
   });
 
   it('keeps starter links and labels configurable or translated', () => {
