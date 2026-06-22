@@ -55,6 +55,10 @@
 }
 
 @media (max-width: 47.999rem) {
+  .reader-topic-strip > .reader-sidebar-link {
+    display: none;
+  }
+
   .reader-menu__page,
   .reader-menu__header {
     display: none;
