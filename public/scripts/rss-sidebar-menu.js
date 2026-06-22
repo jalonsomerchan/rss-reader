@@ -11,13 +11,14 @@ if (root) {
   const drawer = createDrawer();
   const drawerContent = drawer.querySelector('[data-mobile-sidebar-drawer-content]');
   const drawerBackdrop = drawer.querySelector('[data-mobile-sidebar-drawer-backdrop]');
+  let syncFrame = 0;
 
   if (sidebar && menuToggle && drawerContent && drawerBackdrop) {
     document.body.append(drawer);
     syncSidebarMenus();
     bindMobileDrawer();
 
-    new MutationObserver(syncSidebarMenus).observe(sidebar, {
+    new MutationObserver(queueSidebarSync).observe(sidebar, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -55,9 +56,23 @@ if (root) {
     });
   }
 
+  function queueSidebarSync() {
+    if (syncFrame) {
+      return;
+    }
+
+    syncFrame = window.requestAnimationFrame(() => {
+      syncFrame = 0;
+      syncSidebarMenus();
+    });
+  }
+
   function syncSidebarMenus() {
     ensureSourcesLink(sidebar, 'reader-sidebar-link');
-    renderMobileSidebarDrawer();
+
+    if (drawer.dataset.open === 'true' || drawerContent.childElementCount === 0) {
+      renderMobileSidebarDrawer();
+    }
   }
 
   function ensureSourcesLink(container, className) {
@@ -67,8 +82,18 @@ if (root) {
 
     const existing = container.querySelector(':scope > [data-sidebar-sources-link]');
     if (existing) {
-      existing.href = sourcesUrl;
-      existing.textContent = sourcesLabel;
+      if (existing.getAttribute('href') !== sourcesUrl) {
+        existing.href = sourcesUrl;
+      }
+
+      if (existing.textContent !== sourcesLabel) {
+        existing.textContent = sourcesLabel;
+      }
+
+      if (!existing.classList.contains(className)) {
+        existing.className = className;
+      }
+
       return existing;
     }
 
@@ -82,11 +107,11 @@ if (root) {
       return;
     }
 
-    drawerContent.innerHTML = '';
-    drawerContent.append(createDrawerHeader());
+    const fragment = document.createDocumentFragment();
+    fragment.append(createDrawerHeader());
 
     if (sourcesUrl) {
-      drawerContent.append(createSourcesLink('reader-mobile-sidebar-drawer__link'));
+      fragment.append(createSourcesLink('reader-mobile-sidebar-drawer__link'));
     }
 
     const filters = [...sidebar.querySelectorAll('[data-category-filter], [data-source-filter]')];
@@ -97,8 +122,10 @@ if (root) {
         filter.click();
         closeDrawer();
       });
-      drawerContent.append(clone);
+      fragment.append(clone);
     });
+
+    drawerContent.replaceChildren(fragment);
   }
 
   function createDrawer() {
@@ -158,7 +185,7 @@ if (root) {
 
   function openDrawer() {
     closeLegacyMenuPanel();
-    syncSidebarMenus();
+    renderMobileSidebarDrawer();
     drawer.dataset.open = 'true';
     drawer.setAttribute('aria-hidden', 'false');
     menuToggle.setAttribute('aria-expanded', 'true');
