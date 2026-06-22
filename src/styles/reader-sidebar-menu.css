@@ -35,7 +35,8 @@
 
 .reader-sidebar-link:focus-visible,
 .reader-mobile-sidebar-menu__link:focus-visible,
-.reader-mobile-sidebar-menu__filter:focus-visible {
+.reader-mobile-sidebar-menu__filter:focus-visible,
+.reader-mobile-sidebar-menu__close:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--color-primary), transparent 58%);
   outline-offset: 2px;
 }
@@ -45,6 +46,7 @@
 }
 
 .reader-mobile-sidebar-menu__filter {
+  justify-content: flex-start;
   padding: 0 var(--space-3);
   background: transparent;
 }
@@ -54,30 +56,76 @@
   color: var(--color-text);
 }
 
+.reader-mobile-sidebar-menu__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.reader-mobile-sidebar-menu__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.reader-mobile-sidebar-menu__close {
+  min-height: 2.2rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 820;
+  cursor: pointer;
+}
+
 @media (max-width: 47.999rem) {
   .reader-topic-strip > .reader-sidebar-link {
     display: none;
   }
 
-  .reader-menu__page,
-  .reader-menu__header {
-    display: none;
+  .reader-menu__panel {
+    top: var(--reader-appbar-height, 3.75rem);
+    right: auto;
+    bottom: 0;
+    left: 0;
+    width: min(86vw, 22rem);
+    max-height: none;
+    gap: 0;
+    padding: var(--space-4) var(--space-3) calc(var(--space-4) + env(safe-area-inset-bottom));
+    border-top: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+    box-shadow: 24px 0 70px rgb(15 23 42 / 0.24);
+  }
+
+  .reader-menu__panel > :not(.reader-mobile-sidebar-menu) {
+    display: none !important;
   }
 
   .reader-mobile-sidebar-menu {
     display: grid;
+    align-content: start;
     gap: var(--space-1);
+    min-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
-  .reader-mobile-sidebar-menu::before {
-    content: attr(aria-label);
-    display: block;
-    margin: 0 0 var(--space-2);
-    color: var(--color-text-soft);
-    font-size: 0.74rem;
-    font-weight: 820;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+  .reader-mobile-sidebar-menu__link,
+  .reader-mobile-sidebar-menu__filter {
+    min-height: 2.9rem;
+    border-radius: 0.85rem;
+    white-space: normal;
   }
 }
 
