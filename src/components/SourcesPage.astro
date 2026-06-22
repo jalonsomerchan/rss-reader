@@ -1,0 +1,63 @@
+---
+import '../styles/sources-page.css';
+import { rssConfig } from '../config/rss';
+import type { Locale } from '../config/site';
+import { useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const sourcesScriptUrl = `${baseUrl}scripts/rss-sources-page.js`;
+const labels = {
+  categoriesTitle: t('sources.categoriesTitle'),
+  empty: t('sources.empty'),
+  error: t('sources.error'),
+  loading: t('sources.loading'),
+  openSource: t('sources.openSource'),
+  search: t('sources.search'),
+  searchPlaceholder: t('sources.searchPlaceholder'),
+  sourceCount: t('sources.sourceCount'),
+  sourceCountPlural: t('sources.sourceCountPlural'),
+};
+---
+
+<section
+  class="sources-page"
+  data-sources-page
+  data-api-base={rssConfig.apiBase}
+  data-labels={JSON.stringify(labels)}
+>
+  <div class="sources-page__hero">
+    <p class="sources-page__eyebrow">{t('sources.eyebrow')}</p>
+    <h1>{t('sources.title')}</h1>
+    <p>{t('sources.description')}</p>
+  </div>
+
+  <div class="sources-page__search" role="search">
+    <label for="sources-search">{t('sources.search')}</label>
+    <input
+      id="sources-search"
+      type="search"
+      data-sources-search
+      autocomplete="off"
+      placeholder={t('sources.searchPlaceholder')}
+    />
+  </div>
+
+  <p class="sources-page__status" data-sources-status aria-live="polite">{t('sources.loading')}</p>
+
+  <div class="sources-page__layout" data-sources-content hidden>
+    <aside class="sources-page__sidebar" aria-label={t('sources.categoriesTitle')}>
+      <h2>{t('sources.categoriesTitle')}</h2>
+      <nav class="sources-page__nav" data-sources-nav></nav>
+    </aside>
+
+    <div class="sources-page__sections" data-sources-list></div>
+  </div>
+</section>
+
+<script type="module" src={sourcesScriptUrl}></script>

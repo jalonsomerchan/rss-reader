@@ -1,0 +1,13 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SourcesPage from '../components/SourcesPage.astro';
+import { defaultLocale } from '../config/site';
+import { useTranslations } from '../i18n/ui';
+
+const locale = defaultLocale;
+const t = useTranslations(locale);
+---
+
+<BaseLayout title={t('sources.title')} description={t('sources.description')} locale={locale}>
+  <SourcesPage locale={locale} />
+</BaseLayout>
