@@ -18,6 +18,7 @@ interface Props {
 const { locale } = Astro.props;
 const t = useTranslations(locale);
 const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const flatCategoriesScriptUrl = `${baseUrl}scripts/rss-flat-categories.js`;
 const readerScriptUrl = `${baseUrl}scripts/rss-reader.js`;
 const menuEnhancementsScriptUrl = `${baseUrl}scripts/rss-menu-enhancements.js`;
 const mainMenuPagesScriptUrl = `${baseUrl}scripts/rss-main-menu-pages.js`;
@@ -251,6 +252,7 @@ const labels = {
   </div>
 </section>
 
+<script type="module" src={flatCategoriesScriptUrl}></script>
 <script type="module" src={readerScriptUrl}></script>
 <script type="module" src={menuEnhancementsScriptUrl}></script>
 <script type="module" src={mainMenuPagesScriptUrl}></script>
