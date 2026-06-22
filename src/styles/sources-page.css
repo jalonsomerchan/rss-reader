@@ -201,10 +201,25 @@
   white-space: nowrap;
 }
 
+.source-card__actions,
 .source-card__categories {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
+}
+
+.source-card__actions a {
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.35rem 0.6rem;
+}
+
+.source-card__actions a:first-child {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 
 .source-card__categories span {

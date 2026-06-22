@@ -1,0 +1,84 @@
+---
+import '../styles/source-detail-page.css';
+import { rssConfig } from '../config/rss';
+import type { Locale } from '../config/site';
+import { getLocalizedPath, useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+  sourceId: string;
+}
+
+const { locale, sourceId } = Astro.props;
+const t = useTranslations(locale);
+const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const sourceScriptUrl = `${baseUrl}scripts/rss-source-detail.js`;
+const sourcesPath = getLocalizedPath(locale === 'en' ? 'sources' : 'fuentes', locale);
+const labels = {
+  backToSources: t('sourceDetail.backToSources'),
+  categories: t('sourceDetail.categories'),
+  emptyNews: t('sourceDetail.emptyNews'),
+  error: t('sourceDetail.error'),
+  feedUrl: t('sourceDetail.feedUrl'),
+  follow: t('sourceDetail.follow'),
+  ignored: t('sourceDetail.ignored'),
+  ignore: t('sourceDetail.ignore'),
+  latestNews: t('sourceDetail.latestNews'),
+  loading: t('sourceDetail.loading'),
+  openFeed: t('sourceDetail.openFeed'),
+  openNews: t('sourceDetail.openNews'),
+  sourceNotFound: t('sourceDetail.notFound'),
+  statusFollowed: t('sourceDetail.statusFollowed'),
+  statusIgnored: t('sourceDetail.statusIgnored'),
+};
+---
+
+<section
+  class="source-detail"
+  data-source-detail
+  data-api-base={rssConfig.apiBase}
+  data-source-id={sourceId}
+  data-storage-key={rssConfig.storageKey}
+  data-labels={JSON.stringify(labels)}
+>
+  <a class="source-detail__back" href={sourcesPath}>{t('sourceDetail.backToSources')}</a>
+
+  <header class="source-detail__hero">
+    <p class="source-detail__eyebrow">{t('sourceDetail.eyebrow')}</p>
+    <h1 data-source-title>{sourceId}</h1>
+    <p data-source-description>{t('sourceDetail.loading')}</p>
+
+    <div class="source-detail__actions" data-source-actions hidden>
+      <button class="source-detail__toggle" type="button" data-source-toggle></button>
+      <a class="source-detail__feed-link" href="#" target="_blank" rel="noopener noreferrer" data-source-feed-link>
+        {t('sourceDetail.openFeed')}
+      </a>
+    </div>
+  </header>
+
+  <p class="source-detail__status" data-source-status aria-live="polite">{t('sourceDetail.loading')}</p>
+
+  <div class="source-detail__layout" data-source-content hidden>
+    <aside class="source-detail__summary" aria-label={t('sourceDetail.summary')}>
+      <section>
+        <h2>{t('sourceDetail.feedUrl')}</h2>
+        <a href="#" target="_blank" rel="noopener noreferrer" data-source-url></a>
+      </section>
+
+      <section>
+        <h2>{t('sourceDetail.categories')}</h2>
+        <div class="source-detail__tags" data-source-categories></div>
+      </section>
+    </aside>
+
+    <section class="source-detail__news-section">
+      <div class="source-detail__section-heading">
+        <h2>{t('sourceDetail.latestNews')}</h2>
+        <p data-source-news-count></p>
+      </div>
+      <div class="source-detail__news" data-source-news></div>
+    </section>
+  </div>
+</section>
+
+<script type="module" src={sourceScriptUrl}></script>

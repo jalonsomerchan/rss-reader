@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SourceDetailPage from '../../../components/SourceDetailPage.astro';
+import { rssConfig } from '../../../config/rss';
+import { useTranslations } from '../../../i18n/ui';
+
+export async function getStaticPaths() {
+  try {
+    const response = await fetch(new URL('sources.json', rssConfig.apiBase));
+    const sources = response.ok ? await response.json() : [];
+
+    return Array.isArray(sources)
+      ? sources.filter((source) => source?.id).map((source) => ({ params: { sourceId: source.id } }))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+const { sourceId } = Astro.params;
+const locale = 'en';
+const t = useTranslations(locale);
+---
+
+<BaseLayout title={`${sourceId} · ${t('sourceDetail.title')}`} description={t('sourceDetail.description')} locale={locale}>
+  <SourceDetailPage locale={locale} sourceId={sourceId ?? ''} />
+</BaseLayout>
