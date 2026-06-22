@@ -10,6 +10,7 @@ interface Props {
 const { locale } = Astro.props;
 const t = useTranslations(locale);
 const homeUrl = getLocalizedPath('/', locale);
+const categoriesUrl = getLocalizedPath(locale === 'es' ? '/categorias' : '/categories', locale);
 const sourcesUrl = getLocalizedPath(locale === 'es' ? '/fuentes' : '/sources', locale);
 const alternateLocales = getAlternateLocales(locale);
 ---
@@ -19,6 +20,7 @@ const alternateLocales = getAlternateLocales(locale);
     <a class="font-bold tracking-tight" href={homeUrl}>{siteConfig.name}</a>
     <nav aria-label={t('nav.main')} class="flex items-center gap-4 text-sm text-[var(--color-muted)]">
       <a class="hover:text-[var(--color-text)]" href={homeUrl}>{t('nav.home')}</a>
+      <a class="hover:text-[var(--color-text)]" href={categoriesUrl}>{t('nav.categories')}</a>
       <a class="hover:text-[var(--color-text)]" href={sourcesUrl}>{t('nav.sources')}</a>
       {alternateLocales.map((alternateLocale) => (
         <a
