@@ -58,6 +58,7 @@ if (root) {
 
         proxy?.click();
         closeDrawer();
+        scrollPageToTop();
       }
     });
 
@@ -275,6 +276,12 @@ if (root) {
     if (menuPanel) {
       menuPanel.hidden = true;
     }
+  }
+
+  function scrollPageToTop() {
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   function findCategoryFilter(category) {
