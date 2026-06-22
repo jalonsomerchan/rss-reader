@@ -71,6 +71,8 @@
   "reader.saveArticle": "Save",
   "reader.removeSaved": "Remove",
   "reader.saved": "Saved",
+  "reader.viewSource": "View source",
+  "reader.viewSource.aria": "Show only news from {{source}}",
   "reader.justNow": "just now",
   "reader.copiedLink": "Link copied.",
   "reader.savedArticle": "Story saved.",
