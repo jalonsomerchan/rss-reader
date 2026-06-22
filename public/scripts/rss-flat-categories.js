@@ -2,6 +2,7 @@ const FLAT_CATEGORY_ROOT_ATTRIBUTE = 'data-flat-category-catalog';
 const originalFetch = window.fetch.bind(window);
 
 installFlatCategoryStyles();
+window.__normalizeRssCategoryCatalog = normalizeCategoryCatalog;
 
 window.fetch = async (input, init) => {
   const response = await originalFetch(input, init);
@@ -12,24 +13,13 @@ window.fetch = async (input, init) => {
 
   try {
     const catalog = await response.clone().json();
-    const categories = normalizeFlatCategories(catalog);
+    const normalizedCatalog = normalizeCategoryCatalog(catalog);
 
-    if (categories.length === 0) {
+    if (normalizedCatalog === catalog) {
       return response;
     }
 
-    markFlatCategoryCatalog();
-
-    return new Response(JSON.stringify({
-      ...catalog,
-      supercategorias: [
-        {
-          id: 'categorias',
-          title: '',
-          categorias: categories,
-        },
-      ],
-    }), {
+    return new Response(JSON.stringify(normalizedCatalog), {
       status: response.status,
       statusText: response.statusText,
       headers: getJsonHeaders(response.headers),
@@ -70,6 +60,27 @@ function isCategoriesCatalogRequest(input) {
       : input?.url ?? '';
 
   return new URL(url, window.location.href).pathname.endsWith('/categories.json');
+}
+
+function normalizeCategoryCatalog(catalog) {
+  const categories = normalizeFlatCategories(catalog);
+
+  if (categories.length === 0) {
+    return catalog;
+  }
+
+  markFlatCategoryCatalog();
+
+  return {
+    ...catalog,
+    supercategorias: [
+      {
+        id: 'categorias',
+        title: '',
+        categorias: categories,
+      },
+    ],
+  };
 }
 
 function normalizeFlatCategories(catalog) {
