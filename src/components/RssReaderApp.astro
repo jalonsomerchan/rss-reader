@@ -5,13 +5,14 @@ import '../styles/reader-menu-pages.css';
 import '../styles/reader-main-menu-pages.css';
 import '../styles/reader-news.css';
 import '../styles/reader-filter-history.css';
+import '../styles/reader-sidebar-menu.css';
 import '../styles/reader-loading.css';
 import '../styles/reader-sticky-header.css';
 import '../styles/reader-desktop-layout.css';
 import '../styles/reader-pull-refresh.css';
 import { rssConfig } from '../config/rss';
 import type { Locale } from '../config/site';
-import { useTranslations } from '../i18n/ui';
+import { getLocalizedPath, useTranslations } from '../i18n/ui';
 
 interface Props {
   locale: Locale;
@@ -27,6 +28,8 @@ const mainMenuPagesScriptUrl = `${baseUrl}scripts/rss-main-menu-pages.js`;
 const pullRefreshScriptUrl = `${baseUrl}scripts/rss-pull-refresh.js`;
 const imageFallbackScriptUrl = `${baseUrl}scripts/rss-image-fallback.js`;
 const filterHistoryScriptUrl = `${baseUrl}scripts/rss-filter-history.js`;
+const sidebarMenuScriptUrl = `${baseUrl}scripts/rss-sidebar-menu.js`;
+const sourcesUrl = getLocalizedPath(locale === 'en' ? 'sources' : 'fuentes', locale);
 const labels = {
   allCategories: t('reader.categoryFilter.all'),
   copiedLink: t('reader.copiedLink'),
@@ -67,6 +70,8 @@ const labels = {
   data-archive-month-lookback={rssConfig.archiveMonthLookback}
   data-archive-source-batch-size={rssConfig.archiveSourceBatchSize}
   data-locale={locale}
+  data-sources-url={sourcesUrl}
+  data-sources-label={t('nav.sources')}
   data-labels={JSON.stringify(labels)}
 >
   <div class="reader-surface">
@@ -270,3 +275,4 @@ const labels = {
 <script type="module" src={pullRefreshScriptUrl}></script>
 <script type="module" src={imageFallbackScriptUrl}></script>
 <script type="module" src={filterHistoryScriptUrl}></script>
+<script type="module" src={sidebarMenuScriptUrl}></script>
