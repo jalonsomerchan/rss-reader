@@ -7,6 +7,7 @@ import '../styles/reader-news.css';
 import '../styles/reader-filter-history.css';
 import '../styles/reader-loading.css';
 import '../styles/reader-sticky-header.css';
+import '../styles/reader-desktop-layout.css';
 import '../styles/reader-pull-refresh.css';
 import { rssConfig } from '../config/rss';
 import type { Locale } from '../config/site';
@@ -158,7 +159,12 @@ const labels = {
         <span>{t('reader.loading')}</span>
       </div>
 
-      <div class="reader-topic-strip" data-selected-categories aria-label={t('reader.selectedCategoriesLabel')}></div>
+      <div
+        class="reader-topic-strip"
+        data-selected-categories
+        data-category-sidebar-title={t('reader.menu.categories')}
+        aria-label={t('reader.selectedCategoriesLabel')}
+      ></div>
 
       <nav class="reader-tabs" role="tablist" aria-label={t('reader.tabs.label')}>
         <button type="button" role="tab" data-tab="mine" aria-selected="true">
