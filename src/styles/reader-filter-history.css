@@ -1,0 +1,27 @@
+.news-card__source-action {
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.news-card__source-action:hover {
+  border-color: color-mix(in srgb, var(--color-primary), transparent 55%);
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+@media (max-width: 30rem) {
+  .news-card__actions {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.1rem;
+    scrollbar-width: none;
+  }
+
+  .news-card__actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .news-card__action {
+    flex: 0 0 auto;
+  }
+}
