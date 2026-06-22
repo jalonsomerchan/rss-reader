@@ -12,9 +12,12 @@ if (root) {
   const categoryTitle = sidebar?.dataset.categorySidebarTitle ?? 'Categorías';
   const sourceTitle = sidebar?.dataset.sourceSidebarTitle ?? 'Fuentes';
   const closeLabel = menuClose?.textContent?.trim() || 'Cerrar';
+  const storageKey = root.dataset.storageKey ?? 'rss-reader:selected-categories';
+  const apiBase = root.dataset.apiBase ?? '';
   const drawer = createDrawer();
   const drawerContent = drawer.querySelector('[data-mobile-sidebar-drawer-content]');
   const drawerBackdrop = drawer.querySelector('[data-mobile-sidebar-drawer-backdrop]');
+  let sourcesPromise = null;
 
   if (sidebar && menuToggle && drawerContent && drawerBackdrop) {
     document.body.append(drawer);
@@ -104,7 +107,7 @@ if (root) {
       .forEach((item) => item.remove());
   }
 
-  function renderMobileSidebarDrawer() {
+  async function renderMobileSidebarDrawer() {
     if (!drawerContent || !sidebar) {
       return;
     }
@@ -113,7 +116,7 @@ if (root) {
     fragment.append(createDrawerHeader());
     fragment.append(createDrawerSection(categoryTitle, getCategoryFilters(), categoriesUrl, categoriesLabel));
     fragment.append(createDrawerSeparator());
-    fragment.append(createDrawerSection(sourceTitle, getSourceFilters(), sourcesUrl, sourcesLabel));
+    fragment.append(createDrawerSection(sourceTitle, await getSourceFilters(), sourcesUrl, sourcesLabel));
     drawerContent.replaceChildren(fragment);
   }
 
@@ -132,7 +135,9 @@ if (root) {
       }));
   }
 
-  function getSourceFilters() {
+  async function getSourceFilters() {
+    const selectedSourceIds = await getSelectedCategorySourceIds();
+
     return [...root.querySelectorAll('[data-menu-source-filter]')]
       .map((filter) => ({
         type: 'source',
@@ -140,7 +145,46 @@ if (root) {
         label: filter.textContent?.trim() || sourcesLabel,
         pressed: filter.getAttribute('aria-pressed') === 'true',
       }))
-      .filter((filter) => filter.id);
+      .filter((filter) => filter.id && selectedSourceIds.has(filter.id));
+  }
+
+  async function getSelectedCategorySourceIds() {
+    const selectedCategories = readSelectedCategories();
+
+    if (selectedCategories.length === 0) {
+      return new Set();
+    }
+
+    const selected = new Set(selectedCategories);
+    const sources = await loadSources();
+
+    return new Set(
+      sources
+        .filter((source) => source.id && source.categorias?.some((category) => selected.has(category)))
+        .map((source) => source.id)
+    );
+  }
+
+  function readSelectedCategories() {
+    try {
+      const value = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
+      return Array.isArray(value) ? value.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async function loadSources() {
+    if (!sourcesPromise) {
+      sourcesPromise = fetch(new URL('sources.json', apiBase || window.location.href), {
+        headers: { Accept: 'application/json' },
+      })
+        .then((response) => (response.ok ? response.json() : []))
+        .then((sources) => (Array.isArray(sources) ? sources : []))
+        .catch(() => []);
+    }
+
+    return sourcesPromise;
   }
 
   function createDrawerSection(title, filters, moreUrl, moreLabel) {
@@ -250,14 +294,15 @@ if (root) {
     return separator;
   }
 
-  function openDrawer() {
+  async function openDrawer() {
     closeLegacyMenuPanel();
-    renderMobileSidebarDrawer();
+    drawerContent?.replaceChildren(createDrawerHeader());
     drawer.dataset.open = 'true';
     drawer.setAttribute('aria-hidden', 'false');
     menuToggle.setAttribute('aria-expanded', 'true');
     document.documentElement.dataset.mobileSidebarDrawerOpen = 'true';
     drawer.querySelector('a, button')?.focus({ preventScroll: true });
+    await renderMobileSidebarDrawer();
   }
 
   function closeDrawer() {
