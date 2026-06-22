@@ -3,6 +3,7 @@ const root = document.querySelector('[data-sources-page]');
 if (root) {
   const labels = JSON.parse(root.dataset.labels ?? '{}');
   const apiBase = root.dataset.apiBase ?? '';
+  const sourceBasePath = root.dataset.sourceBasePath ?? '';
   const elements = {
     content: root.querySelector('[data-sources-content]'),
     list: root.querySelector('[data-sources-list]'),
@@ -117,16 +118,29 @@ if (root) {
 
     const title = document.createElement('h3');
     const link = document.createElement('a');
-    link.href = source.source;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
+    link.href = getSourcePagePath(source.id);
     link.textContent = source.title ?? source.id;
-    link.setAttribute('aria-label', `${labels.openSource ?? 'Abrir fuente'}: ${source.title ?? source.id}`);
+    link.setAttribute('aria-label', `${labels.viewSourcePage ?? 'Ver página de fuente'}: ${source.title ?? source.id}`);
     title.append(link);
 
     const meta = document.createElement('p');
     meta.className = 'source-card__meta';
     meta.textContent = getFeedHost(source.source);
+
+    const actions = document.createElement('div');
+    actions.className = 'source-card__actions';
+
+    const detailLink = document.createElement('a');
+    detailLink.href = getSourcePagePath(source.id);
+    detailLink.textContent = labels.viewSourcePage ?? 'Ver fuente';
+
+    const feedLink = document.createElement('a');
+    feedLink.href = source.source;
+    feedLink.target = '_blank';
+    feedLink.rel = 'noopener noreferrer';
+    feedLink.textContent = labels.openSource ?? 'Abrir feed';
+
+    actions.append(detailLink, feedLink);
 
     const categories = document.createElement('div');
     categories.className = 'source-card__categories';
@@ -136,7 +150,7 @@ if (root) {
       categories.append(tag);
     });
 
-    article.append(title, meta, categories);
+    article.append(title, meta, actions, categories);
     return article;
   }
 
@@ -186,6 +200,10 @@ if (root) {
 
   function getSourceCategories(source, currentCategory) {
     return [currentCategory, ...(source.categorias ?? []).filter((category) => category !== currentCategory)].slice(0, 4);
+  }
+
+  function getSourcePagePath(sourceId) {
+    return `${sourceBasePath}/${encodeURIComponent(sourceId)}`;
   }
 
   async function fetchApiJson(path) {
