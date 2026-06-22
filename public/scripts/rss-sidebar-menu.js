@@ -5,9 +5,12 @@ if (root) {
   const menuPanel = root.querySelector('[data-menu-panel]');
   const menuToggle = root.querySelector('[data-menu-toggle]');
   const menuClose = root.querySelector('[data-menu-close]');
+  const categoriesUrl = root.dataset.categoriesUrl ?? '';
+  const categoriesLabel = root.dataset.categoriesLabel ?? 'Categorías';
   const sourcesUrl = root.dataset.sourcesUrl ?? '';
   const sourcesLabel = root.dataset.sourcesLabel ?? 'Fuentes';
-  const sidebarTitle = sidebar?.dataset.categorySidebarTitle ?? sidebar?.getAttribute('aria-label') ?? 'Categorías';
+  const categoryTitle = sidebar?.dataset.categorySidebarTitle ?? 'Categorías';
+  const sourceTitle = sidebar?.dataset.sourceSidebarTitle ?? 'Fuentes';
   const closeLabel = menuClose?.textContent?.trim() || 'Cerrar';
   const drawer = createDrawer();
   const drawerContent = drawer.querySelector('[data-mobile-sidebar-drawer-content]');
@@ -15,19 +18,22 @@ if (root) {
 
   if (sidebar && menuToggle && drawerContent && drawerBackdrop) {
     document.body.append(drawer);
-    ensureSourcesLink();
-    bindMobileDrawer();
+    ensureDesktopSidebarLinks();
+    bindUnifiedDrawer();
   }
 
-  function bindMobileDrawer() {
+  function bindUnifiedDrawer() {
     menuToggle.addEventListener('click', (event) => {
-      if (!isMobileDrawerMode()) {
-        return;
-      }
-
       event.preventDefault();
       event.stopImmediatePropagation();
-      openDrawer();
+
+      closeLegacyMenuPanel();
+
+      if (isMobileDrawerMode()) {
+        openDrawer();
+      } else {
+        menuToggle.setAttribute('aria-expanded', 'false');
+      }
     }, true);
 
     drawer.addEventListener('click', (event) => {
@@ -39,6 +45,19 @@ if (root) {
 
       if (target.closest('[data-mobile-sidebar-drawer-close]') || target === drawerBackdrop) {
         closeDrawer();
+        return;
+      }
+
+      const filterButton = target.closest('[data-mobile-sidebar-filter]');
+      if (filterButton) {
+        const sourceId = filterButton.dataset.mobileSidebarSourceFilter;
+        const category = filterButton.dataset.mobileSidebarCategoryFilter;
+        const proxy = sourceId
+          ? findSourceFilter(sourceId)
+          : findCategoryFilter(category ?? '');
+
+        proxy?.click();
+        closeDrawer();
       }
     });
 
@@ -49,13 +68,39 @@ if (root) {
     });
   }
 
-  function ensureSourcesLink() {
-    if (!sidebar || !sourcesUrl || sidebar.querySelector(':scope > [data-sidebar-sources-link]')) {
+  function ensureDesktopSidebarLinks() {
+    if (!sidebar) {
       return;
     }
 
-    const link = createSourcesLink('reader-sidebar-link');
-    sidebar.prepend(link);
+    removeOldSidebarLinks(sidebar);
+
+    const categoryLink = createNavLink({
+      className: 'reader-sidebar-link reader-sidebar-link--categories',
+      href: categoriesUrl,
+      text: categoriesLabel,
+    });
+    const sourcesLink = createNavLink({
+      className: 'reader-sidebar-link reader-sidebar-link--sources',
+      href: sourcesUrl,
+      text: sourcesLabel,
+    });
+    const separator = document.createElement('span');
+    separator.className = 'reader-sidebar-separator';
+    separator.setAttribute('aria-hidden', 'true');
+
+    if (categoriesUrl) {
+      sidebar.append(categoryLink);
+    }
+    sidebar.append(separator);
+    if (sourcesUrl) {
+      sidebar.append(sourcesLink);
+    }
+  }
+
+  function removeOldSidebarLinks(container) {
+    container.querySelectorAll(':scope > [data-sidebar-extra-link], :scope > [data-sidebar-sources-link], :scope > .reader-sidebar-separator')
+      .forEach((item) => item.remove());
   }
 
   function renderMobileSidebarDrawer() {
@@ -65,32 +110,81 @@ if (root) {
 
     const fragment = document.createDocumentFragment();
     fragment.append(createDrawerHeader());
-
-    if (sourcesUrl) {
-      fragment.append(createSourcesLink('reader-mobile-sidebar-drawer__link'));
-    }
-
-    getSidebarFilters().forEach((filter) => {
-      const clone = filter.cloneNode(true);
-      clone.className = 'reader-mobile-sidebar-drawer__filter';
-      clone.type = 'button';
-      clone.addEventListener('click', () => {
-        filter.click();
-        closeDrawer();
-      }, { once: true });
-      fragment.append(clone);
-    });
-
+    fragment.append(createDrawerSection(categoryTitle, getCategoryFilters(), categoriesUrl, categoriesLabel));
+    fragment.append(createDrawerSeparator());
+    fragment.append(createDrawerSection(sourceTitle, getSourceFilters(), sourcesUrl, sourcesLabel));
     drawerContent.replaceChildren(fragment);
   }
 
-  function getSidebarFilters() {
+  function getCategoryFilters() {
     if (!sidebar) {
       return [];
     }
 
-    return [...sidebar.querySelectorAll('[data-category-filter], [data-source-filter]')]
-      .filter((filter) => !filter.matches('[data-sidebar-sources-link]'));
+    return [...sidebar.querySelectorAll('[data-category-filter]')]
+      .filter((filter) => !filter.closest('[data-sidebar-extra-link]'))
+      .map((filter) => ({
+        type: 'category',
+        id: filter.dataset.categoryFilter ?? '',
+        label: filter.textContent?.trim() || categoriesLabel,
+        pressed: filter.getAttribute('aria-pressed') === 'true',
+      }));
+  }
+
+  function getSourceFilters() {
+    return [...root.querySelectorAll('[data-menu-source-filter]')]
+      .map((filter) => ({
+        type: 'source',
+        id: filter.dataset.menuSourceFilter ?? '',
+        label: filter.textContent?.trim() || sourcesLabel,
+        pressed: filter.getAttribute('aria-pressed') === 'true',
+      }))
+      .filter((filter) => filter.id);
+  }
+
+  function createDrawerSection(title, filters, moreUrl, moreLabel) {
+    const section = document.createElement('section');
+    section.className = 'reader-mobile-sidebar-drawer__section';
+
+    const heading = document.createElement('h2');
+    heading.className = 'reader-mobile-sidebar-drawer__section-title';
+    heading.textContent = title;
+    section.append(heading);
+
+    const list = document.createElement('div');
+    list.className = 'reader-mobile-sidebar-drawer__list';
+
+    if (filters.length > 0) {
+      filters.forEach((filter) => list.append(createFilterButton(filter)));
+    }
+
+    if (moreUrl) {
+      list.append(createNavLink({
+        className: 'reader-mobile-sidebar-drawer__link reader-mobile-sidebar-drawer__link--more',
+        href: moreUrl,
+        text: moreLabel,
+      }));
+    }
+
+    section.append(list);
+    return section;
+  }
+
+  function createFilterButton(filter) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'reader-mobile-sidebar-drawer__filter';
+    button.dataset.mobileSidebarFilter = 'true';
+    button.setAttribute('aria-pressed', String(filter.pressed));
+    button.textContent = filter.label;
+
+    if (filter.type === 'source') {
+      button.dataset.mobileSidebarSourceFilter = filter.id;
+    } else {
+      button.dataset.mobileSidebarCategoryFilter = filter.id;
+    }
+
+    return button;
   }
 
   function createDrawer() {
@@ -108,12 +202,12 @@ if (root) {
 
     const panel = document.createElement('aside');
     panel.className = 'reader-mobile-sidebar-drawer__panel';
-    panel.setAttribute('aria-label', sidebarTitle);
+    panel.setAttribute('aria-label', categoryTitle);
 
     const content = document.createElement('nav');
     content.className = 'reader-mobile-sidebar-drawer__content';
     content.dataset.mobileSidebarDrawerContent = 'true';
-    content.setAttribute('aria-label', sidebarTitle);
+    content.setAttribute('aria-label', categoryTitle);
 
     panel.append(content);
     wrapper.append(backdrop, panel);
@@ -126,7 +220,7 @@ if (root) {
 
     const title = document.createElement('p');
     title.className = 'reader-mobile-sidebar-drawer__title';
-    title.textContent = sidebarTitle;
+    title.textContent = categoryTitle;
 
     const close = document.createElement('button');
     close.type = 'button';
@@ -139,13 +233,20 @@ if (root) {
     return header;
   }
 
-  function createSourcesLink(className) {
+  function createNavLink({ className, href, text }) {
     const link = document.createElement('a');
     link.className = className;
-    link.dataset.sidebarSourcesLink = 'true';
-    link.href = sourcesUrl;
-    link.textContent = sourcesLabel;
+    link.dataset.sidebarExtraLink = 'true';
+    link.href = href;
+    link.textContent = text;
     return link;
+  }
+
+  function createDrawerSeparator() {
+    const separator = document.createElement('span');
+    separator.className = 'reader-mobile-sidebar-drawer__separator';
+    separator.setAttribute('aria-hidden', 'true');
+    return separator;
   }
 
   function openDrawer() {
@@ -174,6 +275,16 @@ if (root) {
     if (menuPanel) {
       menuPanel.hidden = true;
     }
+  }
+
+  function findCategoryFilter(category) {
+    return [...root.querySelectorAll('[data-category-filter], [data-menu-category-filter]')]
+      .find((button) => (button.dataset.categoryFilter ?? button.dataset.menuCategoryFilter ?? '') === category) ?? null;
+  }
+
+  function findSourceFilter(sourceId) {
+    return [...root.querySelectorAll('[data-source-filter], [data-menu-source-filter]')]
+      .find((button) => (button.dataset.sourceFilter ?? button.dataset.menuSourceFilter ?? '') === sourceId) ?? null;
   }
 
   function isMobileDrawerMode() {
