@@ -1,6 +1,8 @@
 const FLAT_CATEGORY_ROOT_ATTRIBUTE = 'data-flat-category-catalog';
 const originalFetch = window.fetch.bind(window);
 
+installFlatCategoryStyles();
+
 window.fetch = async (input, init) => {
   const response = await originalFetch(input, init);
 
@@ -36,6 +38,29 @@ window.fetch = async (input, init) => {
     return response;
   }
 };
+
+function installFlatCategoryStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] .reader-category-group__summary,
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] [data-menu-categories] .reader-menu-accordion > summary,
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] [data-menu-sources] .reader-menu-accordion > summary,
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] [data-main-page-categories] summary,
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] [data-main-page-sources] summary {
+      display: none;
+    }
+
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] .reader-category-group,
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] [data-menu-categories] .reader-menu-accordion,
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] [data-menu-sources] .reader-menu-accordion,
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] [data-main-page-categories] details,
+    [${FLAT_CATEGORY_ROOT_ATTRIBUTE}] [data-main-page-sources] details {
+      border: 0;
+      padding: 0;
+    }
+  `;
+  document.head.append(style);
+}
 
 function isCategoriesCatalogRequest(input) {
   const url = typeof input === 'string'
