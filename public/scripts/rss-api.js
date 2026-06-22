@@ -20,10 +20,10 @@ export async function fetchJson(apiBase, path) {
       // Stale cache is enough for the first paint; transient refresh errors should not break it.
     });
 
-    return cachedData;
+    return normalizeFetchedJson(path, cachedData);
   }
 
-  return queueJsonRefresh(url, path);
+  return queueJsonRefresh(url, path).then((data) => normalizeFetchedJson(path, data));
 }
 
 function queueJsonRefresh(url, path) {
@@ -51,6 +51,16 @@ function queueJsonRefresh(url, path) {
   }
 
   return JSON_CACHE.get(url);
+}
+
+function normalizeFetchedJson(path, data) {
+  if (!path.endsWith('categories.json')) {
+    return data;
+  }
+
+  return typeof window.__normalizeRssCategoryCatalog === 'function'
+    ? window.__normalizeRssCategoryCatalog(data)
+    : data;
 }
 
 export function getAllCategories(sources) {
