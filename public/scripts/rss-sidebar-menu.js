@@ -4,26 +4,19 @@ if (root) {
   const sidebar = root.querySelector('[data-selected-categories]');
   const menuPanel = root.querySelector('[data-menu-panel]');
   const menuToggle = root.querySelector('[data-menu-toggle]');
+  const menuClose = root.querySelector('[data-menu-close]');
   const sourcesUrl = root.dataset.sourcesUrl ?? '';
   const sourcesLabel = root.dataset.sourcesLabel ?? 'Fuentes';
   const sidebarTitle = sidebar?.dataset.categorySidebarTitle ?? sidebar?.getAttribute('aria-label') ?? 'Categorías';
-  const closeLabel = root.querySelector('[data-menu-close]')?.textContent?.trim() || 'Cerrar';
+  const closeLabel = menuClose?.textContent?.trim() || 'Cerrar';
   const drawer = createDrawer();
   const drawerContent = drawer.querySelector('[data-mobile-sidebar-drawer-content]');
   const drawerBackdrop = drawer.querySelector('[data-mobile-sidebar-drawer-backdrop]');
-  let syncFrame = 0;
 
   if (sidebar && menuToggle && drawerContent && drawerBackdrop) {
     document.body.append(drawer);
-    syncSidebarMenus();
+    ensureSourcesLink();
     bindMobileDrawer();
-
-    new MutationObserver(queueSidebarSync).observe(sidebar, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['aria-pressed'],
-    });
   }
 
   function bindMobileDrawer() {
@@ -50,56 +43,19 @@ if (root) {
     });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && drawer.dataset.open === 'true') {
+      if (event.key === 'Escape' && isDrawerOpen()) {
         closeDrawer();
       }
     });
   }
 
-  function queueSidebarSync() {
-    if (syncFrame) {
+  function ensureSourcesLink() {
+    if (!sidebar || !sourcesUrl || sidebar.querySelector(':scope > [data-sidebar-sources-link]')) {
       return;
     }
 
-    syncFrame = window.requestAnimationFrame(() => {
-      syncFrame = 0;
-      syncSidebarMenus();
-    });
-  }
-
-  function syncSidebarMenus() {
-    ensureSourcesLink(sidebar, 'reader-sidebar-link');
-
-    if (drawer.dataset.open === 'true' || drawerContent.childElementCount === 0) {
-      renderMobileSidebarDrawer();
-    }
-  }
-
-  function ensureSourcesLink(container, className) {
-    if (!container || !sourcesUrl) {
-      return null;
-    }
-
-    const existing = container.querySelector(':scope > [data-sidebar-sources-link]');
-    if (existing) {
-      if (existing.getAttribute('href') !== sourcesUrl) {
-        existing.href = sourcesUrl;
-      }
-
-      if (existing.textContent !== sourcesLabel) {
-        existing.textContent = sourcesLabel;
-      }
-
-      if (!existing.classList.contains(className)) {
-        existing.className = className;
-      }
-
-      return existing;
-    }
-
-    const link = createSourcesLink(className);
-    container.prepend(link);
-    return link;
+    const link = createSourcesLink('reader-sidebar-link');
+    sidebar.prepend(link);
   }
 
   function renderMobileSidebarDrawer() {
@@ -114,18 +70,27 @@ if (root) {
       fragment.append(createSourcesLink('reader-mobile-sidebar-drawer__link'));
     }
 
-    const filters = [...sidebar.querySelectorAll('[data-category-filter], [data-source-filter]')];
-    filters.forEach((filter) => {
+    getSidebarFilters().forEach((filter) => {
       const clone = filter.cloneNode(true);
       clone.className = 'reader-mobile-sidebar-drawer__filter';
+      clone.type = 'button';
       clone.addEventListener('click', () => {
         filter.click();
         closeDrawer();
-      });
+      }, { once: true });
       fragment.append(clone);
     });
 
     drawerContent.replaceChildren(fragment);
+  }
+
+  function getSidebarFilters() {
+    if (!sidebar) {
+      return [];
+    }
+
+    return [...sidebar.querySelectorAll('[data-category-filter], [data-source-filter]')]
+      .filter((filter) => !filter.matches('[data-sidebar-sources-link]'));
   }
 
   function createDrawer() {
@@ -198,6 +163,11 @@ if (root) {
     drawer.setAttribute('aria-hidden', 'true');
     menuToggle.setAttribute('aria-expanded', 'false');
     delete document.documentElement.dataset.mobileSidebarDrawerOpen;
+    drawerContent?.replaceChildren();
+  }
+
+  function isDrawerOpen() {
+    return drawer.dataset.open === 'true';
   }
 
   function closeLegacyMenuPanel() {
