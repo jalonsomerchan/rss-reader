@@ -1,0 +1,64 @@
+---
+import '../styles/sources-page.css';
+import { rssConfig } from '../config/rss';
+import type { Locale } from '../config/site';
+import { getLocalizedPath, useTranslations } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const categoriesScriptUrl = `${baseUrl}scripts/rss-categories-page.js`;
+const sourcesUrl = getLocalizedPath(locale === 'en' ? 'sources' : 'fuentes', locale);
+const labels = {
+  empty: t('categories.empty'),
+  error: t('categories.error'),
+  loading: t('categories.loading'),
+  search: t('categories.search'),
+  searchPlaceholder: t('categories.searchPlaceholder'),
+  sourceCount: t('sources.sourceCount'),
+  sourceCountPlural: t('sources.sourceCountPlural'),
+  viewSources: t('categories.viewSources'),
+};
+---
+
+<section
+  class="sources-page sources-page--categories"
+  data-categories-page
+  data-api-base={rssConfig.apiBase}
+  data-sources-url={sourcesUrl}
+  data-labels={JSON.stringify(labels)}
+>
+  <div class="sources-page__hero">
+    <p class="sources-page__eyebrow">{t('categories.eyebrow')}</p>
+    <h1>{t('categories.title')}</h1>
+    <p>{t('categories.description')}</p>
+  </div>
+
+  <div class="sources-page__search" role="search">
+    <label for="categories-search">{t('categories.search')}</label>
+    <input
+      id="categories-search"
+      type="search"
+      data-categories-search
+      autocomplete="off"
+      placeholder={t('categories.searchPlaceholder')}
+    />
+  </div>
+
+  <p class="sources-page__status" data-categories-status aria-live="polite">{t('categories.loading')}</p>
+
+  <div class="sources-page__layout" data-categories-content hidden>
+    <aside class="sources-page__sidebar" aria-label={t('categories.title')}>
+      <h2>{t('categories.title')}</h2>
+      <nav class="sources-page__nav" data-categories-nav></nav>
+    </aside>
+
+    <div class="sources-page__sections" data-categories-list></div>
+  </div>
+</section>
+
+<script type="module" src={categoriesScriptUrl}></script>

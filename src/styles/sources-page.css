@@ -67,7 +67,8 @@
 
 .sources-page__search input:focus-visible,
 .sources-page__nav a:focus-visible,
-.source-card a:focus-visible {
+.source-card a:focus-visible,
+.sources-category__action:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--color-primary), transparent 58%);
   outline-offset: 2px;
 }
@@ -213,6 +214,39 @@
   font-size: 0.72rem;
   font-weight: 760;
   padding: 0.35rem 0.6rem;
+}
+
+.sources-category--summary {
+  display: grid;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+
+.sources-category--summary .sources-category__header {
+  border-bottom: 0;
+}
+
+.sources-category--summary .source-card__categories {
+  padding: 0 var(--space-4);
+}
+
+.sources-category__action {
+  display: inline-flex;
+  min-height: 2.6rem;
+  align-items: center;
+  justify-self: start;
+  margin: 0 var(--space-4);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.sources-category__action:hover {
+  color: var(--color-text);
 }
 
 @media (min-width: 48rem) {

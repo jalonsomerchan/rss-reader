@@ -29,6 +29,7 @@ const pullRefreshScriptUrl = `${baseUrl}scripts/rss-pull-refresh.js`;
 const imageFallbackScriptUrl = `${baseUrl}scripts/rss-image-fallback.js`;
 const filterHistoryScriptUrl = `${baseUrl}scripts/rss-filter-history.js`;
 const sidebarMenuScriptUrl = `${baseUrl}scripts/rss-sidebar-menu.js`;
+const categoriesUrl = getLocalizedPath(locale === 'en' ? 'categories' : 'categorias', locale);
 const sourcesUrl = getLocalizedPath(locale === 'en' ? 'sources' : 'fuentes', locale);
 const labels = {
   allCategories: t('reader.categoryFilter.all'),
@@ -70,6 +71,8 @@ const labels = {
   data-archive-month-lookback={rssConfig.archiveMonthLookback}
   data-archive-source-batch-size={rssConfig.archiveSourceBatchSize}
   data-locale={locale}
+  data-categories-url={categoriesUrl}
+  data-categories-label={t('nav.categories')}
   data-sources-url={sourcesUrl}
   data-sources-label={t('nav.sources')}
   data-labels={JSON.stringify(labels)}
@@ -169,6 +172,7 @@ const labels = {
         class="reader-topic-strip"
         data-selected-categories
         data-category-sidebar-title={t('reader.menu.categories')}
+        data-source-sidebar-title={t('reader.menu.sources')}
         aria-label={t('reader.selectedCategoriesLabel')}
       ></div>
 
