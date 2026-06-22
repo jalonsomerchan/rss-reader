@@ -4,9 +4,11 @@ if (root) {
   const sidebar = root.querySelector('[data-selected-categories]');
   const menuPanel = root.querySelector('[data-menu-panel]');
   const menuToggle = root.querySelector('[data-menu-toggle]');
+  const closeTemplate = root.querySelector('[data-menu-close]');
   const sourcesUrl = root.dataset.sourcesUrl ?? '';
   const sourcesLabel = root.dataset.sourcesLabel ?? 'Fuentes';
   const sidebarTitle = sidebar?.dataset.categorySidebarTitle ?? sidebar?.getAttribute('aria-label') ?? 'Categorías';
+  const closeLabel = closeTemplate?.textContent?.trim() || 'Cerrar';
 
   if (sidebar && menuPanel) {
     const mobileMenu = document.createElement('nav');
@@ -90,8 +92,8 @@ if (root) {
     close.type = 'button';
     close.className = 'reader-mobile-sidebar-menu__close';
     close.dataset.mobileSidebarClose = 'true';
-    close.setAttribute('aria-label', 'Cerrar menú');
-    close.textContent = 'Cerrar';
+    close.setAttribute('aria-label', closeLabel);
+    close.textContent = closeLabel;
 
     header.append(title, close);
     return header;
