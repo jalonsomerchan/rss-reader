@@ -675,12 +675,22 @@ if (root) {
       fragment.append(createCategoryFilterChip(state.activeCategoryFilter, state.activeCategoryFilter));
     }
 
-    if (state.activeSourceFilter) {
-      const source = state.sourceMap.get(state.activeSourceFilter);
-      fragment.append(createSourceFilterChip(state.activeSourceFilter, source?.title ?? state.activeSourceFilter));
+    const visibleSources = getVisibleSources();
+    if (visibleSources.length > 0) {
+      fragment.append(createFilterSectionLabel(labels.menuSources ?? 'Fuentes'));
+      visibleSources.forEach((source) => {
+        fragment.append(createSourceFilterChip(source.id, source.title ?? source.id));
+      });
     }
 
     elements.selectedCategories.append(fragment);
+  }
+
+  function createFilterSectionLabel(text) {
+    const label = document.createElement('span');
+    label.className = 'reader-topic-strip__section-label';
+    label.textContent = text;
+    return label;
   }
 
   function createCategoryFilterChip(category, text) {
