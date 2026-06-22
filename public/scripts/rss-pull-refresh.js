@@ -4,6 +4,7 @@ const PULL_DAMPING = 0.55;
 const MIN_PULL_START_PX = 12;
 const RELOAD_DELAY_MS = 180;
 const RESET_DELAY_MS = 220;
+const SCROLLABLE_SELECTOR = '[data-menu-panel], .reader-topic-strip, .source-grid, .news-card__actions';
 
 const root = document.querySelector('[data-rss-reader]');
 const indicator = root?.querySelector('[data-pull-refresh]');
@@ -24,7 +25,9 @@ if (root && indicator && supportsTouch) {
   root.addEventListener('touchcancel', resetPull);
 
   function handleTouchStart(event) {
-    if (event.touches.length !== 1 || !canStartPull()) {
+    const target = event.target instanceof Element ? event.target : null;
+
+    if (event.touches.length !== 1 || isInsideScrollableArea(target) || !canStartPull()) {
       isTracking = false;
       return;
     }
@@ -46,8 +49,9 @@ if (root && indicator && supportsTouch) {
     const touch = event.touches[0];
     const deltaX = touch.clientX - startX;
     const deltaY = touch.clientY - startY;
+    const isMostlyVerticalPull = deltaY >= MIN_PULL_START_PX && Math.abs(deltaY) > Math.abs(deltaX) * 1.4;
 
-    if (deltaY < MIN_PULL_START_PX || Math.abs(deltaY) <= Math.abs(deltaX) * 1.4) {
+    if (!isMostlyVerticalPull) {
       if (isPulling) {
         resetPull();
       }
@@ -60,9 +64,9 @@ if (root && indicator && supportsTouch) {
       return;
     }
 
+    isPulling = true;
     event.preventDefault();
 
-    isPulling = true;
     const pullDistance = Math.min(MAX_PULL_PX, deltaY * PULL_DAMPING);
     isArmed = pullDistance >= PULL_THRESHOLD_PX;
 
@@ -120,10 +124,18 @@ if (root && indicator && supportsTouch) {
   }
 
   function canStartPull() {
-    return window.scrollY <= 0 && !isRefreshing && !isMenuOpen();
+    return getScrollTop() <= 0 && !isRefreshing && !isMenuOpen();
+  }
+
+  function getScrollTop() {
+    return window.scrollY || document.scrollingElement?.scrollTop || document.documentElement.scrollTop || 0;
   }
 
   function isMenuOpen() {
     return Boolean(root.querySelector('[data-menu-panel]:not([hidden])'));
+  }
+
+  function isInsideScrollableArea(target) {
+    return Boolean(target?.closest(SCROLLABLE_SELECTOR));
   }
 }
