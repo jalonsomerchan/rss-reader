@@ -1,0 +1,12 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CategoriesPage from '../../components/CategoriesPage.astro';
+import { useTranslations } from '../../i18n/ui';
+
+const locale = 'en';
+const t = useTranslations(locale);
+---
+
+<BaseLayout title={t('categories.title')} description={t('categories.description')} locale={locale}>
+  <CategoriesPage locale={locale} />
+</BaseLayout>
