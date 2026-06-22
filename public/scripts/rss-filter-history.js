@@ -4,6 +4,7 @@ if (root) {
   const HISTORY_SYNC_DELAY_MS = 0;
   const HISTORY_RESTORE_RETRY_MS = 80;
   const HISTORY_RESTORE_MAX_ATTEMPTS = 25;
+  const FILTER_SCROLL_DELAY_MS = 40;
   const labels = JSON.parse(root.dataset.labels ?? '{}');
   let isRestoringHistory = false;
   let lastSyncedUrl = window.location.href;
@@ -27,15 +28,20 @@ if (root) {
       }
 
       const filterButton = target.closest(
-        '[data-category-filter], [data-source-filter], [data-menu-category-filter], [data-menu-source-filter], [data-tab]'
+        '[data-category-filter], [data-source-filter], [data-menu-category-filter], [data-menu-source-filter]'
       );
 
       if (filterButton) {
+        queueHistorySync({ scrollToTop: true });
+        return;
+      }
+
+      if (target.closest('[data-tab]')) {
         queueHistorySync();
       }
     });
 
-    window.addEventListener('popstate', () => restoreFilterFromUrl());
+    window.addEventListener('popstate', () => restoreFilterFromUrl({ scrollToTop: true }));
   }
 
   function bindHeaderScrollTop() {
@@ -48,7 +54,7 @@ if (root) {
         return;
       }
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollPageToTop();
     });
   }
 
@@ -95,19 +101,19 @@ if (root) {
     }
 
     sourceButton.click();
-    queueHistorySync();
+    queueHistorySync({ scrollToTop: true });
   }
 
-  function restoreFilterFromUrl({ replace = false } = {}) {
+  function restoreFilterFromUrl({ replace = false, scrollToTop = false } = {}) {
     const params = new URLSearchParams(window.location.search);
     const source = params.get('source');
     const category = params.get('category');
 
     isRestoringHistory = true;
-    tryRestoreFilter({ source, category, attempt: 0, replace });
+    tryRestoreFilter({ source, category, attempt: 0, replace, scrollToTop });
   }
 
-  function tryRestoreFilter({ source, category, attempt, replace }) {
+  function tryRestoreFilter({ source, category, attempt, replace, scrollToTop }) {
     const button = source
       ? findFilterButton('[data-menu-source-filter]', 'menuSourceFilter', source)
       : findCategoryRestoreButton(category);
@@ -117,13 +123,17 @@ if (root) {
       window.setTimeout(() => {
         isRestoringHistory = false;
         syncFilterUrl({ replace });
+
+        if (scrollToTop) {
+          scrollPageToTop();
+        }
       }, HISTORY_SYNC_DELAY_MS);
       return;
     }
 
     if (attempt < HISTORY_RESTORE_MAX_ATTEMPTS) {
       window.setTimeout(() => {
-        tryRestoreFilter({ source, category, attempt: attempt + 1, replace });
+        tryRestoreFilter({ source, category, attempt: attempt + 1, replace, scrollToTop });
       }, HISTORY_RESTORE_RETRY_MS);
       return;
     }
@@ -139,12 +149,18 @@ if (root) {
     return root.querySelector('[data-category-filter=""]');
   }
 
-  function queueHistorySync() {
+  function queueHistorySync({ scrollToTop = false } = {}) {
     if (isRestoringHistory) {
       return;
     }
 
-    window.setTimeout(() => syncFilterUrl(), HISTORY_SYNC_DELAY_MS);
+    window.setTimeout(() => {
+      syncFilterUrl();
+
+      if (scrollToTop) {
+        scrollPageToTop();
+      }
+    }, HISTORY_SYNC_DELAY_MS);
   }
 
   function syncFilterUrl({ replace = false } = {}) {
@@ -170,6 +186,12 @@ if (root) {
     const method = replace ? 'replaceState' : 'pushState';
     window.history[method]({ category, source }, '', nextUrl);
     lastSyncedUrl = nextUrl;
+  }
+
+  function scrollPageToTop() {
+    window.setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, FILTER_SCROLL_DELAY_MS);
   }
 
   function getActiveFilters() {
