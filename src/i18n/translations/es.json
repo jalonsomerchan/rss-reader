@@ -71,6 +71,8 @@
   "reader.saveArticle": "Guardar",
   "reader.removeSaved": "Quitar",
   "reader.saved": "Guardado",
+  "reader.viewSource": "Ver fuente",
+  "reader.viewSource.aria": "Ver solo noticias de {{source}}",
   "reader.justNow": "ahora mismo",
   "reader.copiedLink": "Enlace copiado.",
   "reader.savedArticle": "Noticia guardada.",
