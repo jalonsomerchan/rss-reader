@@ -4,6 +4,7 @@ import '../styles/reader-menu.css';
 import '../styles/reader-menu-pages.css';
 import '../styles/reader-main-menu-pages.css';
 import '../styles/reader-news.css';
+import '../styles/reader-filter-history.css';
 import '../styles/reader-loading.css';
 import '../styles/reader-sticky-header.css';
 import '../styles/reader-pull-refresh.css';
@@ -24,6 +25,7 @@ const menuEnhancementsScriptUrl = `${baseUrl}scripts/rss-menu-enhancements.js`;
 const mainMenuPagesScriptUrl = `${baseUrl}scripts/rss-main-menu-pages.js`;
 const pullRefreshScriptUrl = `${baseUrl}scripts/rss-pull-refresh.js`;
 const imageFallbackScriptUrl = `${baseUrl}scripts/rss-image-fallback.js`;
+const filterHistoryScriptUrl = `${baseUrl}scripts/rss-filter-history.js`;
 const labels = {
   allCategories: t('reader.categoryFilter.all'),
   copiedLink: t('reader.copiedLink'),
@@ -49,6 +51,8 @@ const labels = {
   settingsHint: t('reader.settings.hint'),
   share: t('reader.share'),
   shareError: t('reader.shareError'),
+  viewSource: t('reader.viewSource'),
+  viewSourceAria: t('reader.viewSource.aria'),
 };
 ---
 
@@ -258,3 +262,4 @@ const labels = {
 <script type="module" src={mainMenuPagesScriptUrl}></script>
 <script type="module" src={pullRefreshScriptUrl}></script>
 <script type="module" src={imageFallbackScriptUrl}></script>
+<script type="module" src={filterHistoryScriptUrl}></script>
