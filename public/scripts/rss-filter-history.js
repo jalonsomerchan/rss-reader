@@ -11,6 +11,7 @@ if (root) {
   enhanceNewsCards();
   observeNewsCards();
   bindFilterHistory();
+  bindHeaderScrollTop();
   restoreFilterFromUrl({ replace: true });
 
   function bindFilterHistory() {
@@ -35,6 +36,20 @@ if (root) {
     });
 
     window.addEventListener('popstate', () => restoreFilterFromUrl());
+  }
+
+  function bindHeaderScrollTop() {
+    const header = root.querySelector('.reader-appbar');
+
+    header?.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+
+      if (target?.closest('button, a, input, select, textarea, summary, [data-reader-menu], [data-menu-panel]')) {
+        return;
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   function observeNewsCards() {
