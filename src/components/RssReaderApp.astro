@@ -9,6 +9,7 @@ import '../styles/reader-sidebar-menu.css';
 import '../styles/reader-loading.css';
 import '../styles/reader-sticky-header.css';
 import '../styles/reader-desktop-layout.css';
+import '../styles/reader-clean-feed.css';
 import '../styles/reader-pull-refresh.css';
 import { rssConfig } from '../config/rss';
 import type { Locale } from '../config/site';
@@ -44,10 +45,10 @@ const labels = {
   menuSearchResults: t('reader.menu.searchResults'),
   menuSourceResult: t('reader.menu.sourceResult'),
   menuSources: t('reader.menu.sources'),
-  noMoreNews: t('reader.noMoreNews'),
+  noMoreNews: '',
   otherCategories: t('reader.categoryGroups.other'),
   otherSources: t('reader.sourceGroups.other'),
-  readyStatus: t('reader.readyStatus'),
+  readyStatus: '',
   removeSaved: t('reader.removeSaved'),
   saveArticle: t('reader.saveArticle'),
   saved: t('reader.saved'),
@@ -84,10 +85,6 @@ const labels = {
         <span>{t('reader.app.name')}</span>
       </div>
       <div class="reader-appbar__actions">
-        <span class="reader-appbar__status">
-          <span aria-hidden="true"></span>
-          {t('reader.app.status')}
-        </span>
         <div class="reader-menu" data-reader-menu>
           <button
             class="reader-menu__toggle"
