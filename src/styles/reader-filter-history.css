@@ -12,13 +12,8 @@
 @media (max-width: 30rem) {
   .news-card__actions {
     justify-content: flex-start;
-    overflow-x: auto;
-    padding-bottom: 0.1rem;
-    scrollbar-width: none;
-  }
-
-  .news-card__actions::-webkit-scrollbar {
-    display: none;
+    flex-wrap: wrap;
+    touch-action: pan-y;
   }
 
   .news-card__action {
