@@ -1,0 +1,23 @@
+.reader-appbar__status,
+.reader-feed-panel > .reader-section-heading {
+  display: none;
+}
+
+.reader-feedback {
+  min-height: 0;
+}
+
+.reader-status:empty,
+.reader-processing:empty {
+  display: none;
+}
+
+.reader-feed-panel .news-list {
+  padding-top: var(--space-2);
+}
+
+@media (min-width: 48rem) {
+  .reader-feed-panel .news-list {
+    padding-top: 0;
+  }
+}
