@@ -2,7 +2,7 @@
 import '../styles/sources-page.css';
 import { rssConfig } from '../config/rss';
 import type { Locale } from '../config/site';
-import { useTranslations } from '../i18n/ui';
+import { getLocalizedPath, useTranslations } from '../i18n/ui';
 
 interface Props {
   locale: Locale;
@@ -12,6 +12,7 @@ const { locale } = Astro.props;
 const t = useTranslations(locale);
 const baseUrl = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 const sourcesScriptUrl = `${baseUrl}scripts/rss-sources-page.js`;
+const sourceBasePath = getLocalizedPath(locale === 'en' ? 'sources' : 'fuentes', locale).replace(/\/$/, '');
 const labels = {
   categoriesTitle: t('sources.categoriesTitle'),
   empty: t('sources.empty'),
@@ -22,6 +23,7 @@ const labels = {
   searchPlaceholder: t('sources.searchPlaceholder'),
   sourceCount: t('sources.sourceCount'),
   sourceCountPlural: t('sources.sourceCountPlural'),
+  viewSourcePage: t('sources.viewSourcePage'),
 };
 ---
 
@@ -29,6 +31,7 @@ const labels = {
   class="sources-page"
   data-sources-page
   data-api-base={rssConfig.apiBase}
+  data-source-base-path={sourceBasePath}
   data-labels={JSON.stringify(labels)}
 >
   <div class="sources-page__hero">
