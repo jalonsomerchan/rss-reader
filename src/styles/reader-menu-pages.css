@@ -145,6 +145,39 @@
   transform: translateY(-1px);
 }
 
+@media (max-width: 47.999rem) {
+  .reader-menu__quick-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reader-menu__shortcut,
+  .reader-menu__back {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-lg);
+    text-align: left;
+  }
+
+  .reader-menu__back {
+    justify-self: stretch;
+  }
+
+  .reader-menu-filter--enhanced {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+    align-items: start;
+    padding-block: var(--space-2);
+  }
+
+  .reader-menu-filter--enhanced span {
+    white-space: normal;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reader-menu__shortcut,
   .reader-menu__back {
