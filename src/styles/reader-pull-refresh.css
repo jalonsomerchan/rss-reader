@@ -73,6 +73,16 @@
   color: var(--color-primary);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .reader-shell,
+  .reader-topic-strip,
+  .source-grid,
+  [data-menu-panel] {
+    overscroll-behavior: auto;
+    touch-action: auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reader-pull-refresh,
   .reader-shell[data-pull-state] .reader-surface {
