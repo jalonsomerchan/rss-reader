@@ -1,0 +1,13 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ResetDataPage from '../components/ResetDataPage.astro';
+import { defaultLocale } from '../config/site';
+import { useTranslations } from '../i18n/ui';
+
+const locale = defaultLocale;
+const t = useTranslations(locale);
+---
+
+<BaseLayout title={t('reset.title')} description={t('reset.description')} locale={locale}>
+  <ResetDataPage locale={locale} />
+</BaseLayout>
