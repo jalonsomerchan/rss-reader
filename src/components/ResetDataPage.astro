@@ -1,0 +1,204 @@
+---
+import { getLocalizedPath, useTranslations } from '../i18n/ui';
+import type { Locale } from '../config/site';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const homeUrl = getLocalizedPath('/', locale);
+---
+
+<section class="reset-page" data-reset-page>
+  <div class="reset-card">
+    <p class="reset-eyebrow">{t('reset.eyebrow')}</p>
+    <h1>{t('reset.title')}</h1>
+    <p>{t('reset.description')}</p>
+
+    <div class="reset-status" data-reset-status aria-live="polite">
+      {t('reset.running')}
+    </div>
+
+    <ul class="reset-results" data-reset-results aria-label={t('reset.resultsLabel')}></ul>
+
+    <div class="reset-actions">
+      <a class="reset-action reset-action--primary" href={homeUrl}>{t('reset.backHome')}</a>
+      <button class="reset-action" type="button" data-reset-again>{t('reset.runAgain')}</button>
+    </div>
+  </div>
+</section>
+
+<style>
+  .reset-page {
+    display: grid;
+    min-height: 100svh;
+    place-items: center;
+    padding: clamp(1rem, 5vw, 3rem);
+    background:
+      radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary), transparent 82%), transparent 34rem),
+      var(--color-bg);
+  }
+
+  .reset-card {
+    display: grid;
+    width: min(100%, 42rem);
+    gap: 1rem;
+    padding: clamp(1.25rem, 5vw, 2rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2xl);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .reset-eyebrow,
+  .reset-card h1,
+  .reset-card p,
+  .reset-results {
+    margin: 0;
+  }
+
+  .reset-eyebrow {
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 850;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .reset-card h1 {
+    color: var(--color-text);
+    font-size: clamp(1.8rem, 8vw, 3rem);
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+  }
+
+  .reset-card p,
+  .reset-results {
+    color: var(--color-text-muted);
+  }
+
+  .reset-status {
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface-soft);
+    color: var(--color-text);
+    font-weight: 800;
+  }
+
+  .reset-status[data-tone='success'] {
+    border-color: color-mix(in srgb, var(--color-success), transparent 55%);
+  }
+
+  .reset-results {
+    display: grid;
+    gap: 0.45rem;
+    padding-left: 1.2rem;
+    font-size: 0.95rem;
+  }
+
+  .reset-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .reset-action {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: var(--color-surface-soft);
+    color: var(--color-text);
+    font: inherit;
+    font-weight: 850;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .reset-action--primary {
+    border-color: var(--color-text);
+    background: var(--color-text);
+    color: var(--color-bg);
+  }
+</style>
+
+<script define:vars={{
+  labels: {
+    done: t('reset.done'),
+    localStorage: t('reset.item.localStorage'),
+    sessionStorage: t('reset.item.sessionStorage'),
+    caches: t('reset.item.caches'),
+    serviceWorkers: t('reset.item.serviceWorkers'),
+    failed: t('reset.item.failed'),
+  },
+}}>
+  const root = document.querySelector('[data-reset-page]');
+
+  if (root) {
+    const status = root.querySelector('[data-reset-status]');
+    const results = root.querySelector('[data-reset-results]');
+    const again = root.querySelector('[data-reset-again]');
+
+    async function clearEverything() {
+      const messages = [];
+
+      try {
+        window.localStorage?.clear();
+        messages.push(labels.localStorage);
+      } catch (error) {
+        messages.push(`${labels.failed}: localStorage`);
+      }
+
+      try {
+        window.sessionStorage?.clear();
+        messages.push(labels.sessionStorage);
+      } catch (error) {
+        messages.push(`${labels.failed}: sessionStorage`);
+      }
+
+      try {
+        if ('caches' in window) {
+          const names = await window.caches.keys();
+          await Promise.all(names.map((name) => window.caches.delete(name)));
+          messages.push(labels.caches);
+        }
+      } catch (error) {
+        messages.push(`${labels.failed}: caches`);
+      }
+
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+          messages.push(labels.serviceWorkers);
+        }
+      } catch (error) {
+        messages.push(`${labels.failed}: service workers`);
+      }
+
+      if (results) {
+        results.innerHTML = '';
+        messages.forEach((message) => {
+          const item = document.createElement('li');
+          item.textContent = message;
+          results.append(item);
+        });
+      }
+
+      if (status) {
+        status.textContent = labels.done;
+        status.dataset.tone = 'success';
+      }
+    }
+
+    again?.addEventListener('click', clearEverything);
+    clearEverything();
+  }
+</script>
