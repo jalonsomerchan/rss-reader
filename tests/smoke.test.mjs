@@ -58,6 +58,7 @@ describe('project smoke checks', () => {
       'src/styles/reader-pull-refresh.css',
       'public/sw.js',
       'public/scripts/register-sw.js',
+      'public/scripts/rss-flat-categories.js',
       'public/scripts/rss-pull-refresh.js',
     ].forEach((path) => {
       assert.equal(existsSync(join(root, path)), true, `${path} should exist`);
@@ -213,6 +214,7 @@ describe('project smoke checks', () => {
   it('keeps the RSS reader protected against runaway infinite scroll', () => {
     const reader = readText('public/scripts/rss-reader.js');
     const api = readText('public/scripts/rss-api.js');
+    const flatCategories = readText('public/scripts/rss-flat-categories.js');
 
     assert.match(reader, /AUTO_LOAD_COOLDOWN_MS/);
     assert.match(reader, /loadingMore/);
@@ -228,6 +230,10 @@ describe('project smoke checks', () => {
     assert.match(reader, /renderIgnoredSourcePicker/);
     assert.match(reader, /matchesVisibleItem/);
     assert.match(api, /JSON_CACHE/);
+    assert.match(flatCategories, /indexes\/categorias\.json/);
+    assert.match(flatCategories, /indexes\/portada\.json/);
+    assert.match(flatCategories, /fetchFrontPageFromCategoryIndex/);
+    assert.match(flatCategories, /mergeCategoryNews/);
   });
 
   it('keeps starter links and labels configurable or translated', () => {
