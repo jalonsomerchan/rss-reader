@@ -3,10 +3,13 @@ const CATEGORY_NEWS_INDEX_PATH = '/indexes/categorias.json';
 const FRONT_PAGE_INDEX_PATH = '/indexes/portada.json';
 const SOURCE_ARCHIVE_PATH_PATTERN = /\/data\/[^/]+\/\d{4}\/\d{2}\.json$/;
 const ACTIVE_SOURCE_FILTER_SELECTOR = '[data-source-filter][aria-pressed="true"], [data-menu-source-filter][aria-pressed="true"]';
+const CATEGORY_TITLE_BY_KEY = new Map();
+const CATEGORY_ID_BY_KEY = new Map();
 const originalFetch = window.fetch.bind(window);
 
 installFlatCategoryStyles();
 window.__normalizeRssCategoryCatalog = normalizeCategoryCatalog;
+window.__normalizeRssCategoryIndex = normalizeCategoryIndex;
 
 window.fetch = async (input, init) => {
   if (isSourceArchiveRequest(input) && !hasActiveSourceFilter()) {
@@ -19,23 +22,31 @@ window.fetch = async (input, init) => {
 
   const response = await originalFetch(input, init);
 
-  if (!isCategoriesCatalogRequest(input)) {
-    return response;
+  if (isCategoriesCatalogRequest(input)) {
+    return normalizeResponseJson(response, normalizeCategoryCatalog);
   }
 
-  try {
-    const catalog = await response.clone().json();
-    const normalizedCatalog = normalizeCategoryCatalog(catalog);
+  if (isCategoryNewsIndexRequest(input)) {
+    return normalizeResponseJson(response, normalizeCategoryIndex);
+  }
 
-    if (normalizedCatalog === catalog) {
+  return response;
+};
+
+async function normalizeResponseJson(response, normalizer) {
+  try {
+    const data = await response.clone().json();
+    const normalizedData = normalizer(data);
+
+    if (normalizedData === data) {
       return response;
     }
 
-    return createJsonResponse(normalizedCatalog, response);
+    return createJsonResponse(normalizedData, response);
   } catch {
     return response;
   }
-};
+}
 
 async function fetchFrontPageFromCategoryIndex(input, init) {
   const response = await originalFetch(getCategoryNewsIndexUrl(input), init);
@@ -62,7 +73,7 @@ function getCategoryNewsIndexUrl(input) {
 }
 
 function getCategoryIndexNews(categoryIndex) {
-  const categories = categoryIndex?.categorias;
+  const categories = normalizeCategoryIndex(categoryIndex)?.categorias;
 
   if (!categories || typeof categories !== 'object' || Array.isArray(categories)) {
     return [];
@@ -101,9 +112,121 @@ function mergeCategoryNews(newsByUrl, item, category) {
 }
 
 function getItemCategories(item, category) {
-  const categorias = Array.isArray(item.categorias) ? item.categorias : [];
+  const categorias = Array.isArray(item.categorias) ? item.categorias.map(getCategoryTitle) : [];
 
-  return getUniqueValues([...categorias, category].filter(Boolean));
+  return getUniqueValues([...categorias, getCategoryTitle(category)].filter(Boolean));
+}
+
+function normalizeCategoryIndex(categoryIndex) {
+  const categories = categoryIndex?.categorias;
+
+  if (!categories || typeof categories !== 'object' || Array.isArray(categories)) {
+    return categoryIndex;
+  }
+
+  const normalizedCategories = {};
+
+  Object.entries(categories).forEach(([category, items]) => {
+    if (!Array.isArray(items)) {
+      normalizedCategories[category] = items;
+      return;
+    }
+
+    const aliases = getCategoryAliases(category);
+    const normalizedItems = items.map((item) => normalizeCategoryIndexItem(item, aliases.title));
+
+    aliases.keys.forEach((key) => {
+      normalizedCategories[key] = mergeCategoryItemLists(normalizedCategories[key], normalizedItems);
+    });
+  });
+
+  return {
+    ...categoryIndex,
+    categorias: normalizedCategories,
+  };
+}
+
+function normalizeCategoryIndexItem(item, category) {
+  if (!item || typeof item !== 'object') {
+    return item;
+  }
+
+  return {
+    ...item,
+    categorias: getItemCategories(item, category),
+  };
+}
+
+function mergeCategoryItemLists(currentItems, nextItems) {
+  if (!Array.isArray(currentItems)) {
+    return [...nextItems];
+  }
+
+  const itemsByUrl = new Map();
+
+  currentItems.forEach((item) => {
+    if (item?.url) {
+      itemsByUrl.set(item.url, item);
+    }
+  });
+
+  nextItems.forEach((item) => {
+    if (!item?.url) {
+      return;
+    }
+
+    const existingItem = itemsByUrl.get(item.url);
+
+    if (existingItem) {
+      existingItem.categorias = getUniqueValues([...(existingItem.categorias ?? []), ...(item.categorias ?? [])]);
+      return;
+    }
+
+    currentItems.push(item);
+    itemsByUrl.set(item.url, item);
+  });
+
+  return currentItems;
+}
+
+function getCategoryAliases(category) {
+  const key = normalizeCategoryAlias(category);
+  const title = CATEGORY_TITLE_BY_KEY.get(key) ?? category;
+  const id = CATEGORY_ID_BY_KEY.get(key) ?? category;
+
+  return {
+    id,
+    title,
+    keys: getUniqueValues([category, id, title].filter(Boolean)),
+  };
+}
+
+function getCategoryTitle(category) {
+  return CATEGORY_TITLE_BY_KEY.get(normalizeCategoryAlias(category)) ?? category;
+}
+
+function setCategoryAliases(categories) {
+  CATEGORY_TITLE_BY_KEY.clear();
+  CATEGORY_ID_BY_KEY.clear();
+
+  categories.forEach(({ id, title }) => {
+    const aliases = getUniqueValues([id, title].filter(Boolean));
+
+    aliases.forEach((alias) => {
+      const key = normalizeCategoryAlias(alias);
+      CATEGORY_TITLE_BY_KEY.set(key, title);
+      CATEGORY_ID_BY_KEY.set(key, id);
+    });
+  });
+}
+
+function normalizeCategoryAlias(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 function getUniqueValues(values) {
@@ -152,6 +275,10 @@ function isFrontPageIndexRequest(input) {
   return getRequestPathname(input).endsWith(FRONT_PAGE_INDEX_PATH);
 }
 
+function isCategoryNewsIndexRequest(input) {
+  return getRequestPathname(input).endsWith(CATEGORY_NEWS_INDEX_PATH);
+}
+
 function isCategoriesCatalogRequest(input) {
   return getRequestPathname(input).endsWith('/categories.json');
 }
@@ -175,6 +302,7 @@ function normalizeCategoryCatalog(catalog) {
     return catalog;
   }
 
+  setCategoryAliases(categories);
   markFlatCategoryCatalog();
 
   return {
@@ -183,7 +311,7 @@ function normalizeCategoryCatalog(catalog) {
       {
         id: 'categorias',
         title: '',
-        categorias: categories,
+        categorias: categories.map((category) => category.title),
       },
     ],
   };
@@ -194,9 +322,31 @@ function normalizeFlatCategories(catalog) {
     return [];
   }
 
-  return [...new Set(catalog.categorias
-    .map((category) => typeof category === 'string' ? category : category?.title)
-    .filter(Boolean))];
+  const seenCategories = new Set();
+  const categories = [];
+
+  catalog.categorias.forEach((category) => {
+    const id = typeof category === 'string' ? category : category?.id ?? category?.title;
+    const title = typeof category === 'string' ? category : category?.title ?? category?.id;
+
+    if (!id || !title) {
+      return;
+    }
+
+    const key = normalizeCategoryAlias(title);
+
+    if (seenCategories.has(key)) {
+      return;
+    }
+
+    seenCategories.add(key);
+    categories.push({
+      id: String(id),
+      title: String(title),
+    });
+  });
+
+  return categories;
 }
 
 function createJsonResponse(data, response) {
