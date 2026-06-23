@@ -1,12 +1,18 @@
 const FLAT_CATEGORY_ROOT_ATTRIBUTE = 'data-flat-category-catalog';
 const CATEGORY_NEWS_INDEX_PATH = '/indexes/categorias.json';
 const FRONT_PAGE_INDEX_PATH = '/indexes/portada.json';
+const SOURCE_ARCHIVE_PATH_PATTERN = /\/data\/[^/]+\/\d{4}\/\d{2}\.json$/;
+const ACTIVE_SOURCE_FILTER_SELECTOR = '[data-source-filter][aria-pressed="true"], [data-menu-source-filter][aria-pressed="true"]';
 const originalFetch = window.fetch.bind(window);
 
 installFlatCategoryStyles();
 window.__normalizeRssCategoryCatalog = normalizeCategoryCatalog;
 
 window.fetch = async (input, init) => {
+  if (isSourceArchiveRequest(input) && !hasActiveSourceFilter()) {
+    return createStandaloneJsonResponse([]);
+  }
+
   if (isFrontPageIndexRequest(input)) {
     return fetchFrontPageFromCategoryIndex(input, init);
   }
@@ -134,6 +140,14 @@ function installFlatCategoryStyles() {
   document.head.append(style);
 }
 
+function isSourceArchiveRequest(input) {
+  return SOURCE_ARCHIVE_PATH_PATTERN.test(getRequestPathname(input));
+}
+
+function hasActiveSourceFilter() {
+  return Boolean(document.querySelector(ACTIVE_SOURCE_FILTER_SELECTOR));
+}
+
 function isFrontPageIndexRequest(input) {
   return getRequestPathname(input).endsWith(FRONT_PAGE_INDEX_PATH);
 }
@@ -190,6 +204,16 @@ function createJsonResponse(data, response) {
     status: response.status,
     statusText: response.statusText,
     headers: getJsonHeaders(response.headers),
+  });
+}
+
+function createStandaloneJsonResponse(data) {
+  return new Response(JSON.stringify(data), {
+    status: 200,
+    statusText: 'OK',
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+    },
   });
 }
 
