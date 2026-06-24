@@ -65,6 +65,20 @@ export function writeCachedJson(url, data, now = Date.now()) {
   }
 }
 
+export function getCachedJsonUrls() {
+  const storage = getStorage();
+
+  if (!storage) {
+    return [];
+  }
+
+  const indexedKeys = readCacheIndex(storage).map((entry) => entry.key);
+  const storedKeys = getStoredCacheKeys(storage);
+  const cacheKeys = [...new Set([...indexedKeys, ...storedKeys])];
+
+  return cacheKeys.map(getUrlFromCacheKey).filter(Boolean);
+}
+
 function getStorage() {
   try {
     return typeof window === 'undefined' ? null : window.localStorage;
@@ -75,6 +89,14 @@ function getStorage() {
 
 function getCacheKey(url) {
   return `${CACHE_PREFIX}${url}`;
+}
+
+function getUrlFromCacheKey(key) {
+  if (!key.startsWith(CACHE_PREFIX) || key === CACHE_INDEX_KEY) {
+    return null;
+  }
+
+  return key.slice(CACHE_PREFIX.length);
 }
 
 function readCacheIndex(storage) {
@@ -111,4 +133,22 @@ function pruneCache(storage, maxEntries) {
 
   remove.forEach((entry) => storage.removeItem(entry.key));
   writeCacheIndex(storage, keep);
+}
+
+function getStoredCacheKeys(storage) {
+  if (typeof storage.length !== 'number' || typeof storage.key !== 'function') {
+    return [];
+  }
+
+  const keys = [];
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+
+    if (typeof key === 'string' && getUrlFromCacheKey(key)) {
+      keys.push(key);
+    }
+  }
+
+  return keys;
 }
