@@ -1,3 +1,4 @@
+import { withCacheVersion } from '../config/cache';
 import { defaultLocale, siteConfig } from '../config/site';
 import { useTranslations } from '../i18n/ui';
 import { withBasePath } from '../utils/paths';
@@ -19,13 +20,13 @@ export function GET() {
     categories: ['news', 'productivity'],
     icons: [
       {
-        src: withBasePath('icons/android-chrome-192x192.png'),
+        src: withCacheVersion(withBasePath('icons/android-chrome-192x192.png')),
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any maskable',
       },
       {
-        src: withBasePath('icons/android-chrome-512x512.png'),
+        src: withCacheVersion(withBasePath('icons/android-chrome-512x512.png')),
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any maskable',
