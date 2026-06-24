@@ -1,6 +1,8 @@
-const CACHE_NAME = 'rss-reader-pwa-v1';
-const PRECACHE_PATHS = [
-  './',
+const DEFAULT_CACHE_VERSION = '2026-06-24-1';
+const CACHE_VERSION = new URL(self.location.href).searchParams.get('v') ?? DEFAULT_CACHE_VERSION;
+const CACHE_NAME = `rss-reader-pwa-${CACHE_VERSION}`;
+const PRECACHE_PAGES = ['./'];
+const PRECACHE_ASSETS = [
   './manifest.webmanifest',
   './icons/android-chrome-192x192.png',
   './icons/android-chrome-512x512.png',
@@ -11,6 +13,13 @@ const PRECACHE_PATHS = [
 
 function toScopeUrl(path) {
   return new URL(path, self.registration.scope).toString();
+}
+
+function withCacheVersion(url) {
+  const versionedUrl = new URL(url);
+  versionedUrl.searchParams.set('v', CACHE_VERSION);
+
+  return versionedUrl.toString();
 }
 
 async function putInCache(request, response) {
@@ -50,7 +59,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_PATHS.map(toScopeUrl)))
+      .then((cache) =>
+        cache.addAll([...PRECACHE_PAGES.map(toScopeUrl), ...PRECACHE_ASSETS.map(toScopeUrl).map(withCacheVersion)])
+      )
       .then(() => self.skipWaiting())
   );
 });
