@@ -50,6 +50,7 @@ describe('project smoke checks', () => {
       'src/pages/manifest.webmanifest.ts',
       'src/pages/robots.txt.ts',
       'src/layouts/BaseLayout.astro',
+      'src/config/cache.ts',
       'src/config/site.ts',
       'src/i18n/ui.ts',
       'src/i18n/translations',
@@ -168,6 +169,7 @@ describe('project smoke checks', () => {
   });
 
   it('keeps PWA install metadata wired to public icons', () => {
+    const cacheConfig = readText('src/config/cache.ts');
     const layout = readText('src/layouts/BaseLayout.astro');
     const manifest = readText('src/pages/manifest.webmanifest.ts');
     const serviceWorker = readText('public/sw.js');
@@ -183,16 +185,24 @@ describe('project smoke checks', () => {
       assert.equal(existsSync(join(root, path)), true, `${path} should exist`);
     });
 
+    assert.match(cacheConfig, /cacheVersion/);
+    assert.match(cacheConfig, /withCacheVersion/);
     assert.match(layout, /apple-touch-icon/);
     assert.match(layout, /theme-color/);
     assert.match(layout, /scripts\/register-sw\.js/);
+    assert.match(layout, /withCacheVersion/);
     assert.match(manifest, /android-chrome-192x192\.png/);
     assert.match(manifest, /android-chrome-512x512\.png/);
     assert.match(manifest, /purpose:\s*'any maskable'/);
+    assert.match(manifest, /withCacheVersion/);
     assert.match(serviceWorker, /CACHE_NAME/);
+    assert.match(serviceWorker, /CACHE_VERSION/);
+    assert.match(serviceWorker, /searchParams\.get\('v'\)/);
     assert.match(serviceWorker, /self\.registration\.scope/);
     assert.match(serviceWorker, /manifest\.webmanifest/);
     assert.match(registerServiceWorker, /serviceWorker\.register/);
+    assert.match(registerServiceWorker, /serviceWorkerUrl\.searchParams\.set/);
+    assert.match(registerServiceWorker, /registration\.update/);
   });
 
   it('keeps GitHub Pages deployment explicit and static', () => {
