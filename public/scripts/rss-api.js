@@ -1,4 +1,4 @@
-import { readCachedJson, writeCachedJson } from './rss-cache.js';
+import { getCachedJsonUrls, readCachedJson, writeCachedJson } from './rss-cache.js';
 
 const MONTH_FORMATTER = new Intl.NumberFormat('en', {
   minimumIntegerDigits: 2,
@@ -26,6 +26,18 @@ export async function fetchJson(apiBase, path) {
   return queueJsonRefresh(url, path).then((data) => normalizeFetchedJson(path, data));
 }
 
+export async function refreshAllCachedJson(apiBase = '') {
+  const apiRoot = apiBase ? getCleanApiBase(apiBase) : '';
+  const urls = getCachedJsonUrls().filter((url) => !apiRoot || url.startsWith(apiRoot));
+  const results = await Promise.allSettled(urls.map(refreshCachedJsonUrl));
+
+  return {
+    total: urls.length,
+    refreshed: results.filter((result) => result.status === 'fulfilled').length,
+    failed: results.filter((result) => result.status === 'rejected').length,
+  };
+}
+
 function queueJsonRefresh(url, path) {
   if (!JSON_CACHE.has(url)) {
     const request = fetch(url)
@@ -51,6 +63,19 @@ function queueJsonRefresh(url, path) {
   }
 
   return JSON_CACHE.get(url);
+}
+
+async function refreshCachedJsonUrl(url) {
+  const response = await fetch(url, { cache: 'reload' });
+
+  if (!response.ok) {
+    throw new Error(`Could not refresh ${url}`);
+  }
+
+  const data = await response.json();
+  writeCachedJson(url, data);
+
+  return data;
 }
 
 function normalizeFetchedJson(path, data) {
