@@ -1,3 +1,5 @@
+import { refreshAllCachedJson } from './rss-api.js';
+
 const PULL_THRESHOLD_PX = 72;
 const MAX_PULL_PX = 104;
 const PULL_DAMPING = 0.55;
@@ -11,6 +13,7 @@ const indicator = root?.querySelector('[data-pull-refresh]');
 const supportsTouch = 'ontouchstart' in window || (navigator.maxTouchPoints ?? 0) > 0;
 
 if (root && indicator && supportsTouch) {
+  const apiBase = root.dataset.apiBase ?? '';
   let startX = 0;
   let startY = 0;
   let isTracking = false;
@@ -98,7 +101,13 @@ if (root && indicator && supportsTouch) {
     root.style.setProperty('--reader-pull-offset', '3.25rem');
 
     window.setTimeout(() => {
-      window.location.reload();
+      refreshAllCachedJson(apiBase)
+        .catch(() => {
+          // Keep the manual reload behavior even when one cached entry cannot be refreshed.
+        })
+        .finally(() => {
+          window.location.reload();
+        });
     }, RELOAD_DELAY_MS);
   }
 
