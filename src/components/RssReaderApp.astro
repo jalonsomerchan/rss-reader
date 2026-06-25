@@ -60,6 +60,9 @@ const labels = {
   settingsHint: t('reader.settings.hint'),
   share: t('reader.share'),
   shareError: t('reader.shareError'),
+  ignoredSourcesSearch: t('reader.ignoredSources.search'),
+  ignoredSourcesSearchPlaceholder: t('reader.ignoredSources.searchPlaceholder'),
+  ignoredSourcesSummary: t('reader.ignoredSources.summary'),
   viewSource: t('reader.viewSource'),
   viewSourceAria: t('reader.viewSource.aria'),
 };
@@ -93,7 +96,7 @@ const labels = {
             type="button"
             data-menu-toggle
             aria-expanded="false"
-            aria-controls="reader-filter-menu"
+            aria-controls="reader-filter-menu reader-sidebar-menu"
             aria-label={t('reader.menu.open')}
           >
             <span aria-hidden="true"></span>
@@ -168,6 +171,7 @@ const labels = {
       </div>
 
       <div
+        id="reader-sidebar-menu"
         class="reader-topic-strip"
         data-selected-categories
         data-category-sidebar-title={t('reader.menu.categories')}

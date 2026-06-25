@@ -11,9 +11,9 @@ export function getCleanApiBase(apiBase) {
   return apiBase.endsWith('/') ? apiBase : `${apiBase}/`;
 }
 
-export async function fetchJson(apiBase, path) {
+export async function fetchJson(apiBase, path, options = {}) {
   const url = `${getCleanApiBase(apiBase)}${path}`;
-  const cachedData = readCachedJson(url);
+  const cachedData = options.refresh ? null : readCachedJson(url);
 
   if (cachedData) {
     queueJsonRefresh(url, path).catch(() => {

@@ -13,6 +13,7 @@ if (root) {
   const sourceTitle = sidebar?.dataset.sourceSidebarTitle ?? 'Fuentes';
   const closeLabel = menuClose?.textContent?.trim() || 'Cerrar';
   const storageKey = root.dataset.storageKey ?? 'rss-reader:selected-categories';
+  const sidebarCollapsedStorageKey = `${storageKey}:sidebar-collapsed`;
   const apiBase = root.dataset.apiBase ?? '';
   const drawer = createDrawer();
   const drawerContent = drawer.querySelector('[data-mobile-sidebar-drawer-content]');
@@ -22,6 +23,7 @@ if (root) {
   if (sidebar && menuToggle && drawerContent && drawerBackdrop) {
     document.body.append(drawer);
     ensureDesktopSidebarLinks();
+    restoreDesktopSidebarState();
     bindUnifiedDrawer();
   }
 
@@ -35,7 +37,7 @@ if (root) {
       if (isMobileDrawerMode()) {
         openDrawer();
       } else {
-        menuToggle.setAttribute('aria-expanded', 'false');
+        toggleDesktopSidebar();
       }
     }, true);
 
@@ -311,6 +313,34 @@ if (root) {
     menuToggle.setAttribute('aria-expanded', 'false');
     delete document.documentElement.dataset.mobileSidebarDrawerOpen;
     drawerContent?.replaceChildren();
+  }
+
+  function toggleDesktopSidebar() {
+    const isCollapsed = root.dataset.sidebarCollapsed === 'true';
+    setDesktopSidebarCollapsed(!isCollapsed);
+  }
+
+  function restoreDesktopSidebarState() {
+    let isCollapsed = false;
+
+    try {
+      isCollapsed = localStorage.getItem(sidebarCollapsedStorageKey) === 'true';
+    } catch {
+      isCollapsed = false;
+    }
+
+    setDesktopSidebarCollapsed(isCollapsed);
+  }
+
+  function setDesktopSidebarCollapsed(isCollapsed) {
+    root.dataset.sidebarCollapsed = String(isCollapsed);
+    menuToggle.setAttribute('aria-expanded', String(!isCollapsed));
+
+    try {
+      localStorage.setItem(sidebarCollapsedStorageKey, String(isCollapsed));
+    } catch {
+      // The sidebar remains usable even when localStorage is unavailable.
+    }
   }
 
   function isDrawerOpen() {

@@ -65,6 +65,7 @@ if (root) {
     activeTab: 'mine',
     activeCategoryFilter: null,
     activeSourceFilter: null,
+    refreshMode: false,
     sources: [],
     sourceMap: new Map(),
     categoryGroups: [],
@@ -112,7 +113,7 @@ if (root) {
 
   async function init() {
     setLoading(true);
-    state.sources = await fetchJson(config.apiBase, 'sources.json');
+    state.sources = await loadJson('sources.json');
     state.sourceMap = new Map(state.sources.map((source) => [source.id, source]).filter(([id]) => Boolean(id)));
     state.categoryGroups = await loadCategoryGroups();
     state.categories = state.categoryGroups.flatMap((group) => group.categorias);
@@ -135,13 +136,14 @@ if (root) {
 
     await showApp('mine');
     setLoading(false);
+    scheduleInitialRefresh();
   }
 
   async function loadCategoryGroups() {
     const availableCategories = getAllCategories(state.sources);
 
     try {
-      const catalog = await fetchJson(config.apiBase, 'categories.json');
+      const catalog = await loadJson('categories.json');
       const groups = normalizeCategoryGroups(catalog.supercategorias, availableCategories);
 
       return groups.length > 0 ? groups : createFallbackCategoryGroups(availableCategories);
@@ -406,11 +408,43 @@ if (root) {
       elements.ignoredSourcesEmpty.hidden = sources.length > 0;
     }
 
+    if (sources.length === 0) {
+      return;
+    }
+
+    const controls = document.createElement('div');
+    controls.className = 'reader-source-picker__controls';
+
+    const searchLabel = document.createElement('label');
+    searchLabel.className = 'reader-source-picker__search';
+
+    const searchText = document.createElement('span');
+    searchText.textContent = labels.ignoredSourcesSearch ?? 'Buscar fuentes';
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'search';
+    searchInput.autocomplete = 'off';
+    searchInput.placeholder = labels.ignoredSourcesSearchPlaceholder ?? 'Busca una fuente...';
+    searchInput.dataset.ignoredSourceSearch = 'true';
+
+    searchLabel.append(searchText, searchInput);
+
+    const summary = document.createElement('p');
+    summary.className = 'reader-source-picker__summary';
+    summary.dataset.ignoredSourceSummary = 'true';
+
+    controls.append(searchLabel, summary);
+
+    const list = document.createElement('div');
+    list.className = 'reader-source-picker__list';
+    list.dataset.ignoredSourceItems = 'true';
+
     sources.forEach((source, index) => {
       const id = `ignored-source-${index}`;
       const label = document.createElement('label');
       label.className = 'source-pill';
       label.htmlFor = id;
+      label.dataset.sourceTitle = normalizeText(source.title ?? source.id);
 
       const input = document.createElement('input');
       input.type = 'checkbox';
@@ -418,12 +452,20 @@ if (root) {
       input.value = source.id;
       input.dataset.ignoreSource = 'true';
       input.checked = state.draftIgnoredSourceIds.has(source.id);
+      input.addEventListener('change', updateIgnoredSourcePickerSummary);
 
       const text = document.createElement('span');
       text.textContent = source.title ?? source.id;
 
       label.append(input, text);
-      elements.ignoredSources.append(label);
+      list.append(label);
+    });
+
+    elements.ignoredSources.append(controls, list);
+    updateIgnoredSourcePickerSummary();
+
+    searchInput.addEventListener('input', () => {
+      filterIgnoredSourcePicker(searchInput.value);
     });
   }
 
@@ -514,7 +556,7 @@ if (root) {
       sources: [],
     };
 
-    getVisibleSources().forEach((source) => {
+    getSelectedVisibleSources().forEach((source) => {
       const group = groupItems.find((item) => source.categorias?.some((category) => item.categorySet.has(category)));
       (group ?? otherGroup).sources.push(source);
     });
@@ -532,6 +574,56 @@ if (root) {
     return state.sources
       .filter((source) => source.id && !isIgnoredSource(source.id))
       .sort(sortSourcesByTitle);
+  }
+
+  function getSelectedVisibleSources() {
+    const selected = new Set(state.selectedCategories);
+
+    return getVisibleSources()
+      .filter((source) => source.categorias?.some((category) => selected.has(category)))
+      .sort(sortSourcesByTitle);
+  }
+
+  function loadJson(path) {
+    return fetchJson(config.apiBase, path, { refresh: state.refreshMode });
+  }
+
+  function filterIgnoredSourcePicker(query) {
+    const normalizedQuery = normalizeText(query);
+    const sourceItems = [...(elements.ignoredSources?.querySelectorAll('.source-pill') ?? [])];
+
+    sourceItems.forEach((item) => {
+      item.hidden = Boolean(normalizedQuery) && !item.dataset.sourceTitle?.includes(normalizedQuery);
+    });
+
+    updateIgnoredSourcePickerSummary();
+  }
+
+  function updateIgnoredSourcePickerSummary() {
+    const summary = elements.ignoredSources?.querySelector('[data-ignored-source-summary]');
+
+    if (!summary) {
+      return;
+    }
+
+    const sourceItems = [...elements.ignoredSources.querySelectorAll('.source-pill')];
+    const visibleCount = sourceItems.filter((item) => !item.hidden).length;
+    const ignoredCount = [...elements.ignoredSources.querySelectorAll('input[data-ignore-source]:checked')].length;
+    const template = labels.ignoredSourcesSummary ?? '{{visible}} fuentes visibles · {{ignored}} ocultas';
+
+    summary.textContent = template
+      .replaceAll('{{visible}}', String(visibleCount))
+      .replaceAll('{visible}', String(visibleCount))
+      .replaceAll('{{ignored}}', String(ignoredCount))
+      .replaceAll('{ignored}', String(ignoredCount));
+  }
+
+  function normalizeText(value) {
+    return String(value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
   function updateCategoryActions() {
@@ -675,7 +767,7 @@ if (root) {
       fragment.append(createCategoryFilterChip(state.activeCategoryFilter, state.activeCategoryFilter));
     }
 
-    const visibleSources = getVisibleSources();
+    const visibleSources = getSelectedVisibleSources();
     if (visibleSources.length > 0) {
       fragment.append(createFilterSectionLabel(labels.menuSources ?? 'Fuentes'));
       visibleSources.forEach((source) => {
@@ -765,6 +857,30 @@ if (root) {
     applyFilterChange();
   }
 
+  function scheduleInitialRefresh() {
+    window.setTimeout(() => {
+      refreshActiveFeedFromNetwork().catch(() => {
+        // Cached news remains available when the background refresh cannot reach the network.
+      });
+    }, 0);
+  }
+
+  async function refreshActiveFeedFromNetwork() {
+    if (state.selectedCategories.length === 0 || state.activeTab === 'settings' || state.activeTab === 'saved') {
+      return;
+    }
+
+    const tab = state.activeTab;
+    state.refreshMode = true;
+    resetFeeds();
+
+    try {
+      await ensureFeed(tab);
+    } finally {
+      state.refreshMode = false;
+    }
+  }
+
   function applyFilterChange() {
     resetFeeds();
     renderSelectedCategories();
@@ -814,14 +930,14 @@ if (root) {
 
     try {
       if (state.activeCategoryFilter) {
-        const data = await fetchJson(config.apiBase, 'indexes/categorias.json');
+        const data = await loadJson('indexes/categorias.json');
         const items = data.categorias?.[state.activeCategoryFilter] ?? [];
         addUniqueNews(feed, items.map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
       } else if (tab === 'all' || state.activeSourceFilter) {
-        const data = await fetchJson(config.apiBase, 'indexes/portada.json');
+        const data = await loadJson('indexes/portada.json');
         addUniqueNews(feed, (data.noticias ?? []).map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
       } else {
-        const data = await fetchJson(config.apiBase, 'indexes/categorias.json');
+        const data = await loadJson('indexes/categorias.json');
         const items = state.selectedCategories.flatMap((category) => data.categorias?.[category] ?? []);
         addUniqueNews(feed, items.map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
       }
@@ -880,7 +996,7 @@ if (root) {
 
         const results = await Promise.allSettled(
           batch.map(async (source) => {
-            const items = await fetchJson(config.apiBase, getArchivePath(source.id, feed.monthCursor));
+            const items = await loadJson(getArchivePath(source.id, feed.monthCursor));
 
             return Array.isArray(items) ? items.map((item) => normalizeNews(item, source)) : [];
           })

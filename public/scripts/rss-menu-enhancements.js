@@ -387,13 +387,17 @@ if (root) {
   }
 
   function getSearchEntries() {
-    const categories = state.categoryGroups.flatMap((group) => group.categories).map((category) => ({
+    const selectedCategories = new Set(readSelectedCategories());
+    const categories = state.categoryGroups
+      .flatMap((group) => group.categories)
+      .filter((category) => selectedCategories.has(category))
+      .map((category) => ({
       type: 'category',
       id: category,
       label: category,
       meta: getLabel('menuCategoryResult', 'Categoría'),
     }));
-    const sources = getVisibleSources().map((source) => ({
+    const sources = getMySources().map((source) => ({
       type: 'source',
       id: source.id,
       label: source.title ?? source.id,
