@@ -933,14 +933,6 @@ if (root) {
       });
     }
 
-    if (state.activeSourceFilter) {
-      const activeSource = state.sourceMap.get(state.activeSourceFilter);
-
-      if (activeSource) {
-        fragment.append(createSourceActionGroup(activeSource));
-      }
-    }
-
     elements.selectedCategories.append(fragment);
     renderSourceActionPanel();
   }
