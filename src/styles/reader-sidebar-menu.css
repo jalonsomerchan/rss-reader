@@ -237,6 +237,7 @@
   }
 
   .reader-shell[data-sidebar-collapsed="true"] .reader-pull-refresh,
+  .reader-shell[data-sidebar-collapsed="true"] .reader-source-action-panel,
   .reader-shell[data-sidebar-collapsed="true"] .reader-tabs,
   .reader-shell[data-sidebar-collapsed="true"] .reader-feedback,
   .reader-shell[data-sidebar-collapsed="true"] .reader-feed-panel,

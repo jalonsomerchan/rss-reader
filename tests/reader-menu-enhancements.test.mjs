@@ -30,6 +30,7 @@ describe('reader menu enhancements', () => {
     assert.match(reader, /data-tab="favorites"/);
     assert.match(reader, /data-favorite-source-list="settings"/);
     assert.match(reader, /data-panel="favorites"/);
+    assert.match(reader, /data-source-action-panel/);
     assert.match(reader, /reader\.sourceActions\.addFavorite/);
     assert.doesNotMatch(reader, /data-menu-page="my-sources"/);
     assert.doesNotMatch(reader, /data-menu-page="my-categories"/);

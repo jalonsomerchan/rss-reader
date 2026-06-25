@@ -60,6 +60,7 @@ if (root) {
       saved: root.querySelector('[data-empty="saved"]'),
     },
     selectedCategories: root.querySelector('[data-selected-categories]'),
+    sourceActionsPanel: root.querySelector('[data-source-action-panel]'),
     status: root.querySelector('[data-status]'),
     loading: root.querySelector('[data-loading]'),
     loadMore: root.querySelector('[data-load-more]'),
@@ -259,21 +260,20 @@ if (root) {
     });
     elements.selectedCategories?.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
-      const favoriteButton = target?.closest('[data-source-favorite-toggle]');
-      const blockButton = target?.closest('[data-source-block-toggle]');
       const categoryButton = target?.closest('[data-category-filter]');
       const sourceButton = target?.closest('[data-source-filter]');
 
-      if (favoriteButton) {
-        toggleFavoriteSource(favoriteButton.dataset.sourceFavoriteToggle);
-      } else if (blockButton) {
-        toggleIgnoredSource(blockButton.dataset.sourceBlockToggle);
-      } else if (categoryButton) {
+      if (handleSourceActionClick(event)) {
+        return;
+      }
+
+      if (categoryButton) {
         setCategoryFilter(categoryButton.dataset.categoryFilter || null);
       } else if (sourceButton) {
         setSourceFilter(sourceButton.dataset.sourceFilter || null);
       }
     });
+    elements.sourceActionsPanel?.addEventListener('click', handleSourceActionClick);
     elements.menuCategories?.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const button = target?.closest('[data-menu-category-filter]');
@@ -942,6 +942,34 @@ if (root) {
     }
 
     elements.selectedCategories.append(fragment);
+    renderSourceActionPanel();
+  }
+
+  function renderSourceActionPanel() {
+    if (!elements.sourceActionsPanel) {
+      return;
+    }
+
+    elements.sourceActionsPanel.replaceChildren();
+
+    if (!state.activeSourceFilter) {
+      elements.sourceActionsPanel.hidden = true;
+      return;
+    }
+
+    const source = state.sourceMap.get(state.activeSourceFilter);
+
+    if (!source) {
+      elements.sourceActionsPanel.hidden = true;
+      return;
+    }
+
+    const title = document.createElement('p');
+    title.className = 'reader-source-action-panel__title';
+    title.textContent = source.title ?? source.id;
+
+    elements.sourceActionsPanel.append(title, createSourceActionGroup(source));
+    elements.sourceActionsPanel.hidden = false;
   }
 
   function createFilterSectionLabel(text) {
@@ -1010,6 +1038,28 @@ if (root) {
 
     group.append(favoriteButton, blockButton);
     return group;
+  }
+
+  function handleSourceActionClick(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    const favoriteButton = target?.closest('[data-source-favorite-toggle]');
+    const blockButton = target?.closest('[data-source-block-toggle]');
+
+    if (favoriteButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleFavoriteSource(favoriteButton.dataset.sourceFavoriteToggle);
+      return true;
+    }
+
+    if (blockButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleIgnoredSource(blockButton.dataset.sourceBlockToggle);
+      return true;
+    }
+
+    return false;
   }
 
   function getCategoryFilterLabel(category) {

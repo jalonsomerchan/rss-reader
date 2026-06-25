@@ -24,6 +24,7 @@
   }
 
   .reader-pull-refresh,
+  .reader-source-action-panel,
   .reader-tabs,
   .reader-feedback,
   .reader-feed-panel,
@@ -98,12 +99,12 @@
     border-style: dashed;
   }
 
-  .reader-source-actions {
+  .reader-topic-strip > .reader-source-actions {
     display: grid;
     width: calc(100% - var(--space-5));
   }
 
-  .reader-source-actions .reader-topic-chip {
+  .reader-topic-strip > .reader-source-actions .reader-topic-chip {
     width: 100%;
   }
 
