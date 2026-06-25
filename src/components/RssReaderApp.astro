@@ -40,6 +40,10 @@ const labels = {
   errorLoading: t('reader.errorLoading'),
   filterCategory: t('reader.categoryFilter.aria'),
   filterSource: t('reader.sourceFilter.aria'),
+  addFavoriteSource: t('reader.sourceActions.addFavorite'),
+  removeFavoriteSource: t('reader.sourceActions.removeFavorite'),
+  blockSource: t('reader.sourceActions.block'),
+  unblockSource: t('reader.sourceActions.unblock'),
   justNow: t('reader.justNow'),
   menuBack: t('reader.menu.back'),
   menuCategoryResult: t('reader.menu.categoryResult'),
@@ -60,6 +64,9 @@ const labels = {
   settingsHint: t('reader.settings.hint'),
   share: t('reader.share'),
   shareError: t('reader.shareError'),
+  favoriteSourcesSearch: t('reader.favoriteSources.search'),
+  favoriteSourcesSearchPlaceholder: t('reader.favoriteSources.searchPlaceholder'),
+  favoriteSourcesSummary: t('reader.favoriteSources.summary'),
   ignoredSourcesSearch: t('reader.ignoredSources.search'),
   ignoredSourcesSearchPlaceholder: t('reader.ignoredSources.searchPlaceholder'),
   ignoredSourcesSummary: t('reader.ignoredSources.summary'),
@@ -186,6 +193,9 @@ const labels = {
         <button type="button" role="tab" data-tab="all" aria-selected="false">
           <span>{t('reader.tabs.all')}</span>
         </button>
+        <button type="button" role="tab" data-tab="favorites" aria-selected="false">
+          <span>{t('reader.tabs.favorites')}</span>
+        </button>
         <button type="button" role="tab" data-tab="saved" aria-selected="false">
           <span>{t('reader.tabs.saved')}</span>
         </button>
@@ -229,6 +239,15 @@ const labels = {
         <p class="reader-empty" data-empty="saved" hidden>{t('reader.empty.saved')}</p>
       </section>
 
+      <section class="reader-feed-panel" data-panel="favorites" hidden>
+        <div class="reader-section-heading">
+          <h2>{t('reader.favorites.title')}</h2>
+          <p>{t('reader.favorites.description')}</p>
+        </div>
+        <div class="news-list" data-list="favorites"></div>
+        <p class="reader-empty" data-empty="favorites" hidden>{t('reader.empty.favorites')}</p>
+      </section>
+
       <section class="reader-panel reader-menu-main-page" data-main-view="my-categories" tabindex="-1" hidden>
         <div class="reader-section-heading">
           <p class="reader-eyebrow">{t('reader.menu.categories')}</p>
@@ -254,6 +273,16 @@ const labels = {
           <p>{t('reader.settings.description')}</p>
         </div>
         <div class="category-grid" data-category-list="settings" aria-label={t('reader.categoriesLabel')}></div>
+        <div class="reader-settings-block">
+          <div>
+            <h3>{t('reader.favoriteSources.title')}</h3>
+            <p>{t('reader.favoriteSources.description')}</p>
+          </div>
+          <div class="source-grid" data-favorite-source-list="settings" aria-label={t('reader.favoriteSources.label')}></div>
+          <p class="reader-empty reader-empty--compact" data-empty-favorite-sources hidden>
+            {t('reader.favoriteSources.empty')}
+          </p>
+        </div>
         <div class="reader-settings-block">
           <div>
             <h3>{t('reader.ignoredSources.title')}</h3>

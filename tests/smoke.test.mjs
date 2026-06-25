@@ -235,7 +235,11 @@ describe('project smoke checks', () => {
     assert.match(reader, /DocumentFragment/);
     assert.match(reader, /renderedCount/);
     assert.match(reader, /savedStorageKey/);
+    assert.match(reader, /favoriteSourcesStorageKey/);
     assert.match(reader, /renderSavedFeed/);
+    assert.match(reader, /renderFavoriteSourcePicker/);
+    assert.match(reader, /toggleFavoriteSource/);
+    assert.match(reader, /toggleIgnoredSource/);
     assert.match(reader, /ignoredSourcesStorageKey/);
     assert.match(reader, /renderIgnoredSourcePicker/);
     assert.match(reader, /matchesVisibleItem/);

@@ -27,6 +27,10 @@ describe('reader menu enhancements', () => {
     assert.match(reader, /data-menu-search-input/);
     assert.match(reader, /data-main-view-target="my-sources"/);
     assert.match(reader, /data-main-view-target="my-categories"/);
+    assert.match(reader, /data-tab="favorites"/);
+    assert.match(reader, /data-favorite-source-list="settings"/);
+    assert.match(reader, /data-panel="favorites"/);
+    assert.match(reader, /reader\.sourceActions\.addFavorite/);
     assert.doesNotMatch(reader, /data-menu-page="my-sources"/);
     assert.doesNotMatch(reader, /data-menu-page="my-categories"/);
     assert.match(reader, /data-processing-indicator/);
@@ -46,6 +50,11 @@ describe('reader menu enhancements', () => {
       'reader.menu.myCategories',
       'reader.menu.mySources',
       'reader.menu.back',
+      'reader.tabs.favorites',
+      'reader.favoriteSources.title',
+      'reader.empty.favorites',
+      'reader.sourceActions.addFavorite',
+      'reader.sourceActions.block',
       'reader.processing',
     ];
 

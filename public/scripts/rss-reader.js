@@ -21,6 +21,7 @@ if (root) {
     apiBase: root.dataset.apiBase ?? '',
     storageKey,
     ignoredSourcesStorageKey: `${storageKey}:ignored-sources`,
+    favoriteSourcesStorageKey: `${storageKey}:favorite-sources`,
     savedStorageKey: `${storageKey}:saved-news`,
     pageSize: Number(root.dataset.pageSize ?? 8),
     archiveMonthLookback: Number(root.dataset.archiveMonthLookback ?? 12),
@@ -33,6 +34,8 @@ if (root) {
     onboarding: root.querySelector('[data-onboarding]'),
     setupCategories: root.querySelector('[data-category-list="setup"]'),
     settingsCategories: root.querySelector('[data-category-list="settings"]'),
+    favoriteSources: root.querySelector('[data-favorite-source-list="settings"]'),
+    favoriteSourcesEmpty: root.querySelector('[data-empty-favorite-sources]'),
     ignoredSources: root.querySelector('[data-source-list="settings"]'),
     ignoredSourcesEmpty: root.querySelector('[data-empty-ignored-sources]'),
     menuToggle: root.querySelector('[data-menu-toggle]'),
@@ -47,11 +50,13 @@ if (root) {
     lists: {
       mine: root.querySelector('[data-list="mine"]'),
       all: root.querySelector('[data-list="all"]'),
+      favorites: root.querySelector('[data-list="favorites"]'),
       saved: root.querySelector('[data-list="saved"]'),
     },
     empty: {
       mine: root.querySelector('[data-empty="mine"]'),
       all: root.querySelector('[data-empty="all"]'),
+      favorites: root.querySelector('[data-empty="favorites"]'),
       saved: root.querySelector('[data-empty="saved"]'),
     },
     selectedCategories: root.querySelector('[data-selected-categories]'),
@@ -71,6 +76,8 @@ if (root) {
     categoryGroups: [],
     categories: [],
     selectedCategories: [],
+    favoriteSourceIds: new Set(),
+    draftFavoriteSourceIds: new Set(),
     ignoredSourceIds: new Set(),
     draftIgnoredSourceIds: new Set(),
     savedItems: [],
@@ -81,6 +88,7 @@ if (root) {
     feeds: {
       mine: createFeed('mine'),
       all: createFeed('all'),
+      favorites: createFeed('favorites'),
     },
   };
 
@@ -120,6 +128,8 @@ if (root) {
     state.selectedCategories = readSelectedCategories().filter((category) => state.categories.includes(category));
     state.ignoredSourceIds = readIgnoredSourceIds();
     state.draftIgnoredSourceIds = new Set(state.ignoredSourceIds);
+    state.favoriteSourceIds = readFavoriteSourceIds();
+    state.draftFavoriteSourceIds = new Set(state.favoriteSourceIds);
     state.savedItems = readSavedItems();
     state.savedUrls = new Set(state.savedItems.map((item) => item.url).filter(Boolean));
 
@@ -222,7 +232,19 @@ if (root) {
     elements.setupCategories?.addEventListener('change', updateCategoryActions);
     elements.settingsCategories?.addEventListener('change', () => {
       updateCategoryActions();
+      renderFavoriteSourcePicker(getCheckedCategories(elements.settingsCategories));
       renderIgnoredSourcePicker(getCheckedCategories(elements.settingsCategories));
+    });
+    elements.favoriteSources?.addEventListener('change', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const input = target?.closest('input[data-favorite-source]');
+
+      if (!input) {
+        return;
+      }
+
+      updateDraftFavoriteSource(input.value, input.checked);
+      updateSourcePreferenceSummary(elements.favoriteSources, 'favoriteSourceSummary', labels.favoriteSourcesSummary);
     });
     elements.ignoredSources?.addEventListener('change', (event) => {
       const target = event.target instanceof Element ? event.target : null;
@@ -233,13 +255,20 @@ if (root) {
       }
 
       updateDraftIgnoredSource(input.value, input.checked);
+      updateSourcePreferenceSummary(elements.ignoredSources, 'ignoredSourceSummary', labels.ignoredSourcesSummary);
     });
     elements.selectedCategories?.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
+      const favoriteButton = target?.closest('[data-source-favorite-toggle]');
+      const blockButton = target?.closest('[data-source-block-toggle]');
       const categoryButton = target?.closest('[data-category-filter]');
       const sourceButton = target?.closest('[data-source-filter]');
 
-      if (categoryButton) {
+      if (favoriteButton) {
+        toggleFavoriteSource(favoriteButton.dataset.sourceFavoriteToggle);
+      } else if (blockButton) {
+        toggleIgnoredSource(blockButton.dataset.sourceBlockToggle);
+      } else if (categoryButton) {
         setCategoryFilter(categoryButton.dataset.categoryFilter || null);
       } else if (sourceButton) {
         setSourceFilter(sourceButton.dataset.sourceFilter || null);
@@ -324,7 +353,9 @@ if (root) {
     if (tab === 'settings') {
       pauseAutoObserver();
       state.draftIgnoredSourceIds = new Set(state.ignoredSourceIds);
+      state.draftFavoriteSourceIds = new Set(state.favoriteSourceIds);
       renderCategoryPicker(elements.settingsCategories);
+      renderFavoriteSourcePicker(getCheckedCategories(elements.settingsCategories));
       renderIgnoredSourcePicker(getCheckedCategories(elements.settingsCategories));
       setStatus(labels.settingsHint);
       updateCategoryActions();
@@ -345,6 +376,7 @@ if (root) {
   function renderCategoryPickers() {
     renderCategoryPicker(elements.setupCategories);
     renderCategoryPicker(elements.settingsCategories);
+    renderFavoriteSourcePicker(state.selectedCategories);
     renderIgnoredSourcePicker(state.selectedCategories);
     updateCategoryActions();
   }
@@ -397,15 +429,56 @@ if (root) {
   }
 
   function renderIgnoredSourcePicker(categories) {
-    if (!elements.ignoredSources) {
+    renderSourcePreferencePicker({
+      container: elements.ignoredSources,
+      empty: elements.ignoredSourcesEmpty,
+      categories,
+      selectedIds: state.draftIgnoredSourceIds,
+      inputDataName: 'ignoreSource',
+      idPrefix: 'ignored-source',
+      searchText: labels.ignoredSourcesSearch ?? 'Buscar fuentes',
+      searchPlaceholder: labels.ignoredSourcesSearchPlaceholder ?? 'Busca una fuente...',
+      summaryDataName: 'ignoredSourceSummary',
+      summaryTemplate: labels.ignoredSourcesSummary,
+    });
+  }
+
+  function renderFavoriteSourcePicker(categories) {
+    renderSourcePreferencePicker({
+      container: elements.favoriteSources,
+      empty: elements.favoriteSourcesEmpty,
+      categories,
+      selectedIds: state.draftFavoriteSourceIds,
+      inputDataName: 'favoriteSource',
+      idPrefix: 'favorite-source',
+      searchText: labels.favoriteSourcesSearch ?? 'Buscar fuentes',
+      searchPlaceholder: labels.favoriteSourcesSearchPlaceholder ?? 'Busca una fuente...',
+      summaryDataName: 'favoriteSourceSummary',
+      summaryTemplate: labels.favoriteSourcesSummary,
+    });
+  }
+
+  function renderSourcePreferencePicker({
+    container,
+    empty,
+    categories,
+    selectedIds,
+    inputDataName,
+    idPrefix,
+    searchText,
+    searchPlaceholder,
+    summaryDataName,
+    summaryTemplate,
+  }) {
+    if (!container) {
       return;
     }
 
     const sources = getSourcesForCategories(categories);
-    elements.ignoredSources.innerHTML = '';
+    container.innerHTML = '';
 
-    if (elements.ignoredSourcesEmpty) {
-      elements.ignoredSourcesEmpty.hidden = sources.length > 0;
+    if (empty) {
+      empty.hidden = sources.length > 0;
     }
 
     if (sources.length === 0) {
@@ -418,31 +491,31 @@ if (root) {
     const searchLabel = document.createElement('label');
     searchLabel.className = 'reader-source-picker__search';
 
-    const searchText = document.createElement('span');
-    searchText.textContent = labels.ignoredSourcesSearch ?? 'Buscar fuentes';
+    const searchLabelText = document.createElement('span');
+    searchLabelText.textContent = searchText;
 
     const searchInput = document.createElement('input');
     searchInput.type = 'search';
     searchInput.autocomplete = 'off';
-    searchInput.placeholder = labels.ignoredSourcesSearchPlaceholder ?? 'Busca una fuente...';
-    searchInput.dataset.ignoredSourceSearch = 'true';
+    searchInput.placeholder = searchPlaceholder;
+    searchInput.dataset.sourcePreferenceSearch = 'true';
 
-    searchLabel.append(searchText, searchInput);
+    searchLabel.append(searchLabelText, searchInput);
 
     const summary = document.createElement('p');
     summary.className = 'reader-source-picker__summary';
-    summary.dataset.ignoredSourceSummary = 'true';
+    summary.dataset[summaryDataName] = 'true';
 
     controls.append(searchLabel, summary);
 
     const list = document.createElement('div');
     list.className = 'reader-source-picker__list';
-    list.dataset.ignoredSourceItems = 'true';
+    list.dataset.sourcePreferenceItems = 'true';
 
     sources.forEach((source, index) => {
-      const id = `ignored-source-${index}`;
+      const id = `${idPrefix}-${index}`;
       const label = document.createElement('label');
-      label.className = 'source-pill';
+      label.className = `source-pill source-pill--${idPrefix}`;
       label.htmlFor = id;
       label.dataset.sourceTitle = normalizeText(source.title ?? source.id);
 
@@ -450,9 +523,8 @@ if (root) {
       input.type = 'checkbox';
       input.id = id;
       input.value = source.id;
-      input.dataset.ignoreSource = 'true';
-      input.checked = state.draftIgnoredSourceIds.has(source.id);
-      input.addEventListener('change', updateIgnoredSourcePickerSummary);
+      input.dataset[inputDataName] = 'true';
+      input.checked = selectedIds.has(source.id);
 
       const text = document.createElement('span');
       text.textContent = source.title ?? source.id;
@@ -461,11 +533,12 @@ if (root) {
       list.append(label);
     });
 
-    elements.ignoredSources.append(controls, list);
-    updateIgnoredSourcePickerSummary();
+    container.append(controls, list);
+    updateSourcePreferenceSummary(container, summaryDataName, summaryTemplate);
 
     searchInput.addEventListener('input', () => {
-      filterIgnoredSourcePicker(searchInput.value);
+      filterSourcePreferencePicker(container, searchInput.value);
+      updateSourcePreferenceSummary(container, summaryDataName, summaryTemplate);
     });
   }
 
@@ -588,34 +661,40 @@ if (root) {
     return fetchJson(config.apiBase, path, { refresh: state.refreshMode });
   }
 
-  function filterIgnoredSourcePicker(query) {
+  function filterSourcePreferencePicker(container, query) {
     const normalizedQuery = normalizeText(query);
-    const sourceItems = [...(elements.ignoredSources?.querySelectorAll('.source-pill') ?? [])];
+    const sourceItems = [...(container?.querySelectorAll('.source-pill') ?? [])];
 
     sourceItems.forEach((item) => {
       item.hidden = Boolean(normalizedQuery) && !item.dataset.sourceTitle?.includes(normalizedQuery);
     });
-
-    updateIgnoredSourcePickerSummary();
   }
 
-  function updateIgnoredSourcePickerSummary() {
-    const summary = elements.ignoredSources?.querySelector('[data-ignored-source-summary]');
+  function updateSourcePreferenceSummary(container, summaryDataName, summaryTemplate) {
+    const summary = container?.querySelector(`[data-${kebabCase(summaryDataName)}]`);
 
     if (!summary) {
       return;
     }
 
-    const sourceItems = [...elements.ignoredSources.querySelectorAll('.source-pill')];
+    const sourceItems = [...container.querySelectorAll('.source-pill')];
     const visibleCount = sourceItems.filter((item) => !item.hidden).length;
-    const ignoredCount = [...elements.ignoredSources.querySelectorAll('input[data-ignore-source]:checked')].length;
-    const template = labels.ignoredSourcesSummary ?? '{{visible}} fuentes visibles · {{ignored}} ocultas';
+    const selectedCount = [...container.querySelectorAll('input:checked')].length;
+    const template = summaryTemplate ?? '{{visible}} fuentes visibles · {{selected}} seleccionadas';
 
     summary.textContent = template
       .replaceAll('{{visible}}', String(visibleCount))
       .replaceAll('{visible}', String(visibleCount))
-      .replaceAll('{{ignored}}', String(ignoredCount))
-      .replaceAll('{ignored}', String(ignoredCount));
+      .replaceAll('{{selected}}', String(selectedCount))
+      .replaceAll('{selected}', String(selectedCount))
+      .replaceAll('{{ignored}}', String(selectedCount))
+      .replaceAll('{ignored}', String(selectedCount))
+      .replaceAll('{{favorites}}', String(selectedCount))
+      .replaceAll('{favorites}', String(selectedCount));
+  }
+
+  function kebabCase(value) {
+    return String(value).replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
   }
 
   function normalizeText(value) {
@@ -671,10 +750,72 @@ if (root) {
     }
   }
 
+  function updateDraftFavoriteSource(sourceId, isFavorite) {
+    if (!sourceId) {
+      return;
+    }
+
+    if (isFavorite) {
+      state.draftFavoriteSourceIds.add(sourceId);
+    } else {
+      state.draftFavoriteSourceIds.delete(sourceId);
+    }
+  }
+
+  function toggleFavoriteSource(sourceId) {
+    if (!sourceId || !state.sourceMap.has(sourceId)) {
+      return;
+    }
+
+    if (state.favoriteSourceIds.has(sourceId)) {
+      state.favoriteSourceIds.delete(sourceId);
+    } else {
+      state.favoriteSourceIds.add(sourceId);
+    }
+
+    state.draftFavoriteSourceIds = new Set(state.favoriteSourceIds);
+    persistFavoriteSourceIds();
+    resetFeeds();
+    renderSelectedCategories();
+    renderFilterMenu();
+
+    if (state.activeTab === 'favorites') {
+      showApp('favorites');
+    }
+  }
+
+  function toggleIgnoredSource(sourceId) {
+    if (!sourceId || !state.sourceMap.has(sourceId)) {
+      return;
+    }
+
+    if (state.ignoredSourceIds.has(sourceId)) {
+      state.ignoredSourceIds.delete(sourceId);
+    } else {
+      state.ignoredSourceIds.add(sourceId);
+      if (state.activeSourceFilter === sourceId) {
+        state.activeSourceFilter = null;
+      }
+    }
+
+    state.draftIgnoredSourceIds = new Set(state.ignoredSourceIds);
+    persistIgnoredSourceIds();
+    resetFeeds();
+    renderSelectedCategories();
+    renderFilterMenu();
+    showApp(state.activeTab === 'settings' ? 'mine' : state.activeTab);
+  }
+
   function getVisibleIgnoredSourceIds(categories) {
     const visibleSourceIds = new Set(getSourcesForCategories(categories).map((source) => source.id));
 
     return [...state.draftIgnoredSourceIds].filter((sourceId) => visibleSourceIds.has(sourceId));
+  }
+
+  function getVisibleFavoriteSourceIds(categories) {
+    const visibleSourceIds = new Set(getSourcesForCategories(categories).map((source) => source.id));
+
+    return [...state.draftFavoriteSourceIds].filter((sourceId) => visibleSourceIds.has(sourceId));
   }
 
   function saveCategoriesFrom(container) {
@@ -689,6 +830,8 @@ if (root) {
     state.selectedCategories = categories;
 
     if (isSettings) {
+      state.favoriteSourceIds = new Set(getVisibleFavoriteSourceIds(categories));
+      persistFavoriteSourceIds();
       state.ignoredSourceIds = new Set(getVisibleIgnoredSourceIds(categories));
       persistIgnoredSourceIds();
 
@@ -729,6 +872,21 @@ if (root) {
 
   function persistIgnoredSourceIds() {
     localStorage.setItem(config.ignoredSourcesStorageKey, JSON.stringify([...state.ignoredSourceIds]));
+  }
+
+  function readFavoriteSourceIds() {
+    try {
+      const value = JSON.parse(localStorage.getItem(config.favoriteSourcesStorageKey) ?? '[]');
+      const sourceIds = new Set(state.sources.map((source) => source.id).filter(Boolean));
+
+      return new Set(Array.isArray(value) ? value.filter((sourceId) => sourceIds.has(sourceId)) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  function persistFavoriteSourceIds() {
+    localStorage.setItem(config.favoriteSourcesStorageKey, JSON.stringify([...state.favoriteSourceIds]));
   }
 
   function readSavedItems() {
@@ -775,6 +933,14 @@ if (root) {
       });
     }
 
+    if (state.activeSourceFilter) {
+      const activeSource = state.sourceMap.get(state.activeSourceFilter);
+
+      if (activeSource) {
+        fragment.append(createSourceActionGroup(activeSource));
+      }
+    }
+
     elements.selectedCategories.append(fragment);
   }
 
@@ -815,6 +981,35 @@ if (root) {
     button.textContent = text;
 
     return button;
+  }
+
+  function createSourceActionGroup(source) {
+    const group = document.createElement('div');
+    group.className = 'reader-source-actions';
+    group.setAttribute('aria-label', source.title ?? source.id);
+
+    const favoriteButton = document.createElement('button');
+    const isFavorite = state.favoriteSourceIds.has(source.id);
+    favoriteButton.type = 'button';
+    favoriteButton.className = 'reader-topic-chip reader-source-action reader-source-action--favorite';
+    favoriteButton.dataset.sourceFavoriteToggle = source.id;
+    favoriteButton.setAttribute('aria-pressed', String(isFavorite));
+    favoriteButton.textContent = isFavorite
+      ? labels.removeFavoriteSource ?? 'Quitar favorita'
+      : labels.addFavoriteSource ?? 'Añadir favorita';
+
+    const blockButton = document.createElement('button');
+    const isIgnored = state.ignoredSourceIds.has(source.id);
+    blockButton.type = 'button';
+    blockButton.className = 'reader-topic-chip reader-source-action reader-source-action--block';
+    blockButton.dataset.sourceBlockToggle = source.id;
+    blockButton.setAttribute('aria-pressed', String(isIgnored));
+    blockButton.textContent = isIgnored
+      ? labels.unblockSource ?? 'Desbloquear'
+      : labels.blockSource ?? 'Bloquear';
+
+    group.append(favoriteButton, blockButton);
+    return group;
   }
 
   function getCategoryFilterLabel(category) {
@@ -893,6 +1088,7 @@ if (root) {
   function resetFeeds() {
     state.feeds.mine = createFeed('mine');
     state.feeds.all = createFeed('all');
+    state.feeds.favorites = createFeed('favorites');
   }
 
   async function ensureFeed(tab) {
@@ -933,7 +1129,7 @@ if (root) {
         const data = await loadJson('indexes/categorias.json');
         const items = data.categorias?.[state.activeCategoryFilter] ?? [];
         addUniqueNews(feed, items.map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
-      } else if (tab === 'all' || state.activeSourceFilter) {
+      } else if (tab === 'all' || tab === 'favorites' || state.activeSourceFilter) {
         const data = await loadJson('indexes/portada.json');
         addUniqueNews(feed, (data.noticias ?? []).map((item) => normalizeNews(item, sourceMap.get(item.fuenteId))).filter(matchesVisibleItem));
       } else {
@@ -1024,6 +1220,14 @@ if (root) {
         return feed.archiveSources;
       }
 
+      if (feed.tab === 'favorites') {
+        feed.archiveSources = [...state.favoriteSourceIds]
+          .map((sourceId) => state.sourceMap.get(sourceId))
+          .filter((source) => source?.id && !isIgnoredSource(source.id))
+          .sort(sortSourcesByTitle);
+        return feed.archiveSources;
+      }
+
       const categoryFilters = getFeedCategoryFilters(feed.tab);
       const sources = categoryFilters.length === 0
         ? state.sources
@@ -1044,7 +1248,7 @@ if (root) {
   }
 
   function matchesVisibleItem(item) {
-    return matchesActiveCategory(item) && matchesActiveSource(item) && !isIgnoredSource(item.fuenteId);
+    return matchesActiveCategory(item) && matchesActiveSource(item) && matchesFavoriteSource(item) && !isIgnoredSource(item.fuenteId);
   }
 
   function matchesActiveCategory(item) {
@@ -1053,6 +1257,10 @@ if (root) {
 
   function matchesActiveSource(item) {
     return !state.activeSourceFilter || item.fuenteId === state.activeSourceFilter;
+  }
+
+  function matchesFavoriteSource(item) {
+    return state.activeTab !== 'favorites' || state.favoriteSourceIds.has(item.fuenteId);
   }
 
   function isIgnoredSource(sourceId) {

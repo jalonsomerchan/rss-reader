@@ -98,6 +98,15 @@
     border-style: dashed;
   }
 
+  .reader-source-actions {
+    display: grid;
+    width: calc(100% - var(--space-5));
+  }
+
+  .reader-source-actions .reader-topic-chip {
+    width: 100%;
+  }
+
   .reader-tabs {
     position: sticky;
     top: calc(var(--reader-appbar-height) + var(--space-4));
