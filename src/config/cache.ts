@@ -1,4 +1,8 @@
-export const cacheVersion = '2026-06-24-1';
+function createBuildCacheVersion() {
+  return new Date().toISOString().replaceAll(/\D/g, '').slice(0, 12);
+}
+
+export const cacheVersion = import.meta.env.PUBLIC_CACHE_VERSION ?? createBuildCacheVersion();
 
 export function withCacheVersion(url: string): string {
   const separator = url.includes('?') ? '&' : '?';

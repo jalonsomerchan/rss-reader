@@ -1,4 +1,4 @@
-const DEFAULT_CACHE_VERSION = '2026-06-24-1';
+const DEFAULT_CACHE_VERSION = '2026-06-26-1';
 const CACHE_VERSION = new URL(self.location.href).searchParams.get('v') ?? DEFAULT_CACHE_VERSION;
 const CACHE_NAME = `rss-reader-pwa-${CACHE_VERSION}`;
 const PRECACHE_PAGES = ['./'];
@@ -44,14 +44,25 @@ async function getCachedOrFetch(request) {
   return response;
 }
 
-async function getNavigationResponse(request) {
+async function getNetworkOrCached(request) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'no-store' });
     await putInCache(request, response);
 
     return response;
   } catch {
-    return (await caches.match(request)) ?? caches.match(toScopeUrl('./'));
+    return (await caches.match(request)) ?? Response.error();
+  }
+}
+
+async function getNavigationResponse(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    await putInCache(request, response);
+
+    return response;
+  } catch {
+    return (await caches.match(request)) ?? (await caches.match(toScopeUrl('./'))) ?? Response.error();
   }
 }
 
@@ -64,6 +75,12 @@ self.addEventListener('install', (event) => {
       )
       .then(() => self.skipWaiting())
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    event.waitUntil(self.skipWaiting());
+  }
 });
 
 self.addEventListener('activate', (event) => {
@@ -93,7 +110,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (['image', 'script', 'style', 'font'].includes(request.destination) || url.pathname.endsWith('.webmanifest')) {
+  if (['script', 'style', 'font'].includes(request.destination) || url.pathname.endsWith('.webmanifest')) {
+    event.respondWith(getNetworkOrCached(request));
+    return;
+  }
+
+  if (request.destination === 'image') {
     event.respondWith(getCachedOrFetch(request));
   }
 });

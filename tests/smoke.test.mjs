@@ -186,6 +186,7 @@ describe('project smoke checks', () => {
     });
 
     assert.match(cacheConfig, /cacheVersion/);
+    assert.match(cacheConfig, /PUBLIC_CACHE_VERSION/);
     assert.match(cacheConfig, /withCacheVersion/);
     assert.match(layout, /apple-touch-icon/);
     assert.match(layout, /theme-color/);
@@ -197,12 +198,15 @@ describe('project smoke checks', () => {
     assert.match(manifest, /withCacheVersion/);
     assert.match(serviceWorker, /CACHE_NAME/);
     assert.match(serviceWorker, /CACHE_VERSION/);
+    assert.match(serviceWorker, /getNetworkOrCached/);
     assert.match(serviceWorker, /searchParams\.get\('v'\)/);
+    assert.match(serviceWorker, /SKIP_WAITING/);
     assert.match(serviceWorker, /self\.registration\.scope/);
     assert.match(serviceWorker, /manifest\.webmanifest/);
     assert.match(registerServiceWorker, /serviceWorker\.register/);
     assert.match(registerServiceWorker, /serviceWorkerUrl\.searchParams\.set/);
     assert.match(registerServiceWorker, /registration\.update/);
+    assert.match(registerServiceWorker, /controllerchange/);
   });
 
   it('keeps GitHub Pages deployment explicit and static', () => {
